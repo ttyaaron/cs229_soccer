@@ -2,6 +2,7 @@ import json
 import matplotlib.pyplot as plt
 import numpy as np
 from matplotlib.animation import FuncAnimation
+import os
 
 ax = None
 limits = None
@@ -270,13 +271,16 @@ def main_func(kick_number):
     while True:
         # gather the pose key points for each frame and store into the master array
         try:
+
             if i < 10:
                 numb = str(0) + str(i)
             else:
                 numb = str(i)
-            json_file = '..\output\pose_estimation_results_1\Kick_' + str(
-                kick_number) + '_0000000000' + numb + '_keypoints.json'
-            # json_file = '/Users/nolanjetter/Desktop/Pose estimation results_batch 1/Kick_' + str(
+            src_dir = os.path.dirname(__file__)
+            src_dir = os.path.abspath(os.path.join(src_dir, '..')) # go up one level.
+            json_file = os.path.join(src_dir, 'output/pose_estimation_results_1/Kick_' + str(
+               kick_number) + '_0000000000' + numb + '_keypoints.json')
+            # json_file = '..\output\pose_estimation_results_1\Kick_' + str(
             #     kick_number) + '_0000000000' + numb + '_keypoints.json'
             pose_keypoints = load_keypoints_from_json(json_file)
             if pose_keypoints is not None:
@@ -305,9 +309,8 @@ def main_func(kick_number):
     master_array = np.array(master_array)
 
     # Unresolved Comment: plot a single frame using plot_keypoints
-    if False:
+    if True:
         fig, ax = plt.subplots(figsize=(8, 8))  # Create a figure and axis for plotting
-        frame_to_plot = 0  # Choose which frame to plot (e.g., the first frame)
         print('first real point: ' + str(first_real_point))
         print('frame of contact: ' + str(contact_frames[kick_number]))
         adjusted_frame = contact_frames[kick_number] - first_real_point  # Plot the keypoints for the selected frame
@@ -335,7 +338,7 @@ def main_func(kick_number):
         plt.show()
 
     # plot the combination of animation + time-series plot of joint locations.
-    if True:
+    if False:
         joint_indices = [22, 10, 14]  # Example: Left ankle, left knee, left hip
         joint_names = ["right foot", "right knee", "left ankle"]
         # Call the function to animate and plot time-series
@@ -343,6 +346,6 @@ def main_func(kick_number):
 
 
 if __name__ == "__main__":
-    kick_numb = 1
+    kick_numb = 10
     main_func(kick_numb)
 
