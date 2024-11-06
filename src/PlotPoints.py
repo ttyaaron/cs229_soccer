@@ -250,7 +250,7 @@ def plot_combined_animation_with_time_series(master_array, joint_indices, joint_
     # Set up the FuncAnimation with a frame generator
     fig.canvas.mpl_connect('button_press_event', on_click)
     anim = FuncAnimation(
-        fig, animate_combined, frames=frame_generator(num_frames), interval=500,
+        fig, animate_combined, frames=frame_generator(num_frames), interval=3000,
         fargs=(master_array, joint_indices, joint_names, fig, ax_pose, ax_time_series_x, ax_time_series_y, lines, frame_counter, skeleton_scale),
         blit=False  # Disable blitting for simplicity
     )
@@ -309,7 +309,7 @@ def main_func(kick_number):
     master_array = np.array(master_array)
 
     # Unresolved Comment: plot a single frame using plot_keypoints
-    if True:
+    if False:
         fig, ax = plt.subplots(figsize=(8, 8))  # Create a figure and axis for plotting
         print('first real point: ' + str(first_real_point))
         print('frame of contact: ' + str(contact_frames[kick_number]))
@@ -334,18 +334,17 @@ def main_func(kick_number):
         # Set up the figure and axis for animation
         fig, ax = plt.subplots(figsize=(8, 8))
         # Create the animation, updating every 500 milliseconds
-        anim = FuncAnimation(fig, animate, frames=len(master_array), interval=1000)
+        anim = FuncAnimation(fig, animate, frames=len(master_array), interval=2000)
         plt.show()
 
     # plot the combination of animation + time-series plot of joint locations.
-    if False:
+    if True:
         joint_indices = [22, 10, 14]  # Example: Left ankle, left knee, left hip
         joint_names = ["right foot", "right knee", "left ankle"]
         # Call the function to animate and plot time-series
-        plot_combined_animation_with_time_series(master_array, joint_indices, joint_names, skeleton_scale=2)
+        plot_combined_animation_with_time_series(master_array, joint_indices, joint_names, skeleton_scale=3)
 
 
 if __name__ == "__main__":
-    kick_numb = 10
+    kick_numb = 11
     main_func(kick_numb)
-
