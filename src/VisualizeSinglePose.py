@@ -77,6 +77,6 @@ def display_frame_with_pose(video_number, frame_number):
 
 # Example usage:
 contact_frames = np.load("contact_frames.npy")
-video_number = 2  # Set the desired video number here
-frame_number = contact_frames[video_number-1]  # Set the desired frame number here
+video_number = 9
+frame_number = 63
 display_frame_with_pose(video_number, frame_number)
