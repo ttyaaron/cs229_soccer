@@ -106,12 +106,8 @@ def process_kick_videos(num_kicks, batch_number):
 
     # Save the contact frames as a NumPy array
     contact_frames_array = np.array(contact_frames)
+    return contact_frames_array
     np.save(os.path.join(output_dir, "contact_frames.npy"), contact_frames_array)
     print(f"Contact frames saved to '{output_dir}\\contact_frames.npy'.")
 
 
-# Example usage
-if __name__ == "__main__":
-    num_kicks = 20  # Adjust this to the number of kick videos you have
-    batch_number = 1  # Set your batch number here
-    process_kick_videos(num_kicks, batch_number)

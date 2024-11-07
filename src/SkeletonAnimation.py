@@ -79,46 +79,54 @@ def frame_generator(num_frames):
             yield None
 
 
-def animate_combined(i, master_array, joint_indices, fig, ax_pose, ax_time_series_x, ax_time_series_y,
-                     line_x, line_y, frame_counter, skeleton_scale):
+def animate_combined(i, master_array, joint_groups, names, fig, ax_pose, ax_time_series_x, ax_time_series_y,
+                     lines_x, lines_y, frame_counter, skeleton_scale):
     global paused
     if paused:
-        return line_x, line_y, frame_counter
+        return lines_x, lines_y, frame_counter
 
     plot_keypoints(ax_pose, master_array[i])
 
-    # Calculate the average position of the specified joints for the time series plot
-    avg_x = np.mean(master_array[:i + 1, joint_indices, 0], axis=1)
-    avg_y = np.mean(master_array[:i + 1, joint_indices, 1], axis=1)
+    for idx, joints in enumerate(joint_groups):
+        # Calculate the average position of the specified joints for the time series plot
+        avg_x = np.mean(master_array[:i + 1, joints, 0], axis=1)
+        avg_y = np.mean(master_array[:i + 1, joints, 1], axis=1)
 
-    # Update time-series plot with averaged trajectory
-    line_x.set_data(range(i + 1), avg_x)
-    line_y.set_data(range(i + 1), avg_y)
+        # Update the time-series plot with averaged trajectories
+        lines_x[idx].set_data(range(i + 1), avg_x)
+        lines_y[idx].set_data(range(i + 1), avg_y)
+
     frame_counter.set_text(f"Frame: {i}")
 
-    return line_x, line_y, frame_counter
+    return lines_x + lines_y + [frame_counter]
 
 
-def plot_combined_animation_with_time_series(master_array, joint_indices, skeleton_scale=2, interval=1500):
+def plot_combined_animation_with_time_series(master_array, joint_groups, names, skeleton_scale=2, interval=1500):
     num_frames = master_array.shape[0]
 
     fig, (ax_pose, ax_time_series_x, ax_time_series_y) = plt.subplots(1, 3, figsize=(15, 6))
 
-    # Initialize time-series lines for average X and Y coordinates
-    line_x, = ax_time_series_x.plot([], [], label="Average X")  # X-coordinate line
-    line_y, = ax_time_series_y.plot([], [], label="Average Y")  # Y-coordinate line
+    # Initialize time-series lines for each group
+    lines_x = []
+    lines_y = []
+
+    for name in names:
+        line_x, = ax_time_series_x.plot([], [], label=f"{name} X")
+        line_y, = ax_time_series_y.plot([], [], label=f"{name} Y")
+        lines_x.append(line_x)
+        lines_y.append(line_y)
 
     # Time-series plot settings for X coordinates
     ax_time_series_x.set_xlim(0, num_frames)
-    ax_time_series_x.set_ylim(np.min(master_array[:, joint_indices, 0]) - 50,
-                              np.max(master_array[:, joint_indices, 0]) + 50)
+    ax_time_series_x.set_ylim(np.min(master_array[:, :, 0]) - 50,
+                              np.max(master_array[:, :, 0]) + 50)
     ax_time_series_x.set_title("Average Joint X Coordinates Over Time")
     ax_time_series_x.legend()
 
     # Time-series plot settings for Y coordinates
     ax_time_series_y.set_xlim(0, num_frames)
-    ax_time_series_y.set_ylim(np.min(master_array[:, joint_indices, 1]) - 50,
-                              np.max(master_array[:, joint_indices, 1]) + 50)
+    ax_time_series_y.set_ylim(np.min(master_array[:, :, 1]) - 50,
+                              np.max(master_array[:, :, 1]) + 50)
     ax_time_series_y.set_title("Average Joint Y Coordinates Over Time")
     ax_time_series_y.legend()
 
@@ -128,8 +136,8 @@ def plot_combined_animation_with_time_series(master_array, joint_indices, skelet
     fig.canvas.mpl_connect('button_press_event', on_click)
     anim = FuncAnimation(
         fig, animate_combined, frames=frame_generator(num_frames), interval=interval,
-        fargs=(master_array, joint_indices, fig, ax_pose, ax_time_series_x, ax_time_series_y,
-               line_x, line_y, frame_counter, skeleton_scale),
+        fargs=(master_array, joint_groups, names, fig, ax_pose, ax_time_series_x, ax_time_series_y,
+               lines_x, lines_y, frame_counter, skeleton_scale),
         blit=False
     )
     plt.tight_layout()
@@ -137,16 +145,10 @@ def plot_combined_animation_with_time_series(master_array, joint_indices, skelet
 
 
 # Main Processing
-def adjust_keypoints_to_fixed_foot(pose_keypoints, desired_foot_location, foot_indices):
-    """Adjust all keypoints so the plant foot stays at the desired location."""
-    valid_foot_points = np.array(
-        [pose_keypoints[i, :2] for i in foot_indices if not (pose_keypoints[i, 0] == 0 and pose_keypoints[i, 1] == 0)])
-
-    if valid_foot_points.size == 0:
-        return pose_keypoints  # Return unchanged if no valid foot points
-
-    foot_x, foot_y = np.mean(valid_foot_points, axis=0)
-    translation = np.array(desired_foot_location) - np.array([foot_x, foot_y])
+def adjust_keypoints_to_ball_location(pose_keypoints, ball_location):
+    """Adjust all keypoints so the ball stays at the origin (0,0)."""
+    ball_x, ball_y = ball_location
+    translation = np.array([0, 0]) - np.array([ball_x, ball_y])
     pose_keypoints[:, :2] += translation  # Apply translation to x and y only
     return pose_keypoints
 
@@ -164,7 +166,7 @@ def calculate_limits(keypoints_array):
     return min(all_x), max(all_x), min(all_y), max(all_y)
 
 
-def main_func(kick_number, joint_indices, interval=1500):
+def main_func(kick_number, joint_groups, names, interval=1500):
     global master_array, limits
 
     contact_frames = load_contact_frames()
@@ -172,21 +174,22 @@ def main_func(kick_number, joint_indices, interval=1500):
         return
 
     master_array = []
+    ball_location = [200, 500]  # Define ball location here as needed
     for i in range(30):  # Adjust the frame limit as needed
         json_file = os.path.join(os.path.dirname(__file__),
                                  f'../output/pose_estimation_results_1/Kick_{kick_number}_0000000000{str(i).zfill(2)}_keypoints.json')
         pose_keypoints = load_keypoints_from_json(json_file)
         if pose_keypoints is not None:
-            adjusted_keypoints = adjust_keypoints_to_fixed_foot(pose_keypoints, [200, 500], [14, 19, 20, 21])
+            adjusted_keypoints = adjust_keypoints_to_ball_location(pose_keypoints, ball_location)
             master_array.append(adjusted_keypoints)
 
     master_array = np.array(master_array)
     limits = calculate_limits(master_array)
-    plot_combined_animation_with_time_series(master_array, joint_indices, skeleton_scale=3, interval=interval)
+    plot_combined_animation_with_time_series(master_array, joint_groups, names, skeleton_scale=3, interval=interval)
 
 
 if __name__ == "__main__":
-    kick_number = 11
-    joint_indices = [22, 10, 14]
-    # plot the average x, y coordinates of the joint_indices enumerated. Interval controls the speed.
-    main_func(kick_number, joint_indices, interval=1000)
+    kick_number = 9
+    joint_groups = [[11, 22, 23, 24], [14, 19, 20, 21]]  # Define groups of joints to average
+    names = ["left foot", "right foot"]  # Define names for each group
+    main_func(kick_number, joint_groups, names, interval=1000)
