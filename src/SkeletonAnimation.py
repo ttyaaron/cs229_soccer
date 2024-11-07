@@ -144,6 +144,36 @@ def plot_combined_animation_with_time_series(master_array, joint_groups, names, 
     plt.show()
 
 
+def plot_joint_positions_over_time(master_array, joint_groups, names):
+    """Plot x and y positions of joint groups over time with color gradients representing time in side-by-side plots."""
+    num_frames = master_array.shape[0]
+    fig, axes = plt.subplots(1, len(joint_groups), figsize=(8 * len(joint_groups), 8))
+
+    # Ensure axes is iterable even if there's only one joint group
+    if len(joint_groups) == 1:
+        axes = [axes]
+
+    # Color schemes for different joint groups
+    color_schemes = [(0, 0, 1), (1, 0, 0)]  # RGB basis for each group
+    for idx, (joints, ax) in enumerate(zip(joint_groups, axes)):
+        color_base = np.array(color_schemes[idx % len(color_schemes)])  # Cycle through color schemes if needed
+        for frame in range(num_frames):
+            # Compute the average x, y position for the joint group at each frame
+            avg_x = np.mean(master_array[frame, joints, 0])
+            avg_y = np.mean(master_array[frame, joints, 1])
+            # Color varies with time using the base color
+            color = color_base * (frame / num_frames)
+            ax.scatter(avg_x, avg_y, color=color, label=names[idx] if frame == 0 else "")
+
+        ax.set_xlabel("X Coordinate")
+        ax.set_ylabel("Y Coordinate")
+        ax.set_title(f"{names[idx]} Positions Over Time with Color Gradient")
+        ax.legend()
+
+    plt.tight_layout()
+    plt.show()
+
+
 # Main Processing
 def adjust_keypoints_to_ball_location(pose_keypoints, ball_location):
     """Adjust all keypoints so the ball stays at the origin (0,0)."""
@@ -185,7 +215,12 @@ def main_func(kick_number, joint_groups, names, interval=1500):
 
     master_array = np.array(master_array)
     limits = calculate_limits(master_array)
+
+    # Plot combined animation with time series
     plot_combined_animation_with_time_series(master_array, joint_groups, names, skeleton_scale=3, interval=interval)
+
+    # Plot joint positions over time
+    plot_joint_positions_over_time(master_array, joint_groups, names)
 
 
 if __name__ == "__main__":

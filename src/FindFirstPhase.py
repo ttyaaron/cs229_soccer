@@ -1,15 +1,10 @@
 import json
-import os
 import numpy as np
+import os
 
-# Constants
 FILENAME = 'contact_frames.npy'
-LEFT_FOOT_INDICES = [11, 22, 23, 24]
-RIGHT_FOOT_INDICES = [14, 19, 20, 21]
-THRESHOLD = 0.5  # Threshold for detecting stability in x/y coordinates
 
 
-# Data Loading
 def load_contact_frames(filename=FILENAME):
     """Load the array representing frames of ball contact."""
     try:
@@ -30,77 +25,53 @@ def load_keypoints_from_json(json_file):
         return np.array(data["people"][0]["pose_keypoints_2d"]).reshape(-1, 3)
 
 
-# Foot Analysis
-def compute_foot_covariance(foot_data):
-    """Compute covariance matrix for foot movement based on x and y coordinates."""
-    foot_coords_flat = foot_data.reshape(-1, 2)  # Flatten for covariance calculation
-    return np.cov(foot_coords_flat, rowvar=False)
+def find_plant_foot(ball_location, pose_keypoints_array):
+    left_foot_joints = [11, 22, 23, 24]
+    right_foot_joints = [14, 19, 20, 21]
 
+    # - the function takes as input the contact frame, ball location, and the pose_keypoints.
 
-def detect_plant_foot(master_array, contact_frame):
-    """Detect the plant foot by comparing determinants of covariance matrices up to ball contact."""
-    left_foot_data = master_array[:contact_frame, LEFT_FOOT_INDICES, :2]  # X, Y coordinates for left foot
-    right_foot_data = master_array[:contact_frame, RIGHT_FOOT_INDICES, :2]  # X, Y coordinates for right foot
+    # - move the keypoints relative to the soccer ball: the soccer ball should be located at (0,0) and everything should
+    #   be translated relative to this reference.
+    keypoints_relative_to_ball = pose_keypoints_array.copy()
+    keypoints_relative_to_ball[:, :, 0] -= ball_location[0]  # Adjust x-coordinates
+    keypoints_relative_to_ball[:, :, 1] -= ball_location[1]  # Adjust y-coordinates
 
-    left_foot_cov = compute_foot_covariance(left_foot_data)
-    right_foot_cov = compute_foot_covariance(right_foot_data)
+    # - find the mean of the position of the left joints and right joints for all of the frames up until ball contact.
+    #   The mean should have an x+y component and we should have a mean for the left foot and right foot.
+    left_foot_positions = keypoints_relative_to_ball[:, left_foot_joints, :2]  # Exclude confidence values
+    right_foot_positions = keypoints_relative_to_ball[:, right_foot_joints, :2]
 
-    left_det = np.linalg.det(left_foot_cov)
-    right_det = np.linalg.det(right_foot_cov)
+    left_foot_mean = np.mean(left_foot_positions, axis=(0, 1))  # Mean x and y for left foot
+    print(left_foot_mean.shape)
+    right_foot_mean = np.mean(right_foot_positions, axis=(0, 1))  # Mean x and y for right foot
 
-    plant_foot = 'left' if left_det < right_det else 'right'
-    print(f"Plant foot determined: {plant_foot} (Left det: {left_det}, Right det: {right_det})")
-    return plant_foot, LEFT_FOOT_INDICES if plant_foot == 'left' else RIGHT_FOOT_INDICES
+    # - center the pose_keypoints relative to the mean, and then calculate the covariance for the left and right foot.
+    left_foot_centered = left_foot_positions - left_foot_mean  # Center left foot positions
+    right_foot_centered = right_foot_positions - right_foot_mean  # Center right foot positions
 
+    left_foot_covariance = np.cov(left_foot_centered.reshape(-1, 2), rowvar=False)
+    right_foot_covariance = np.cov(right_foot_centered.reshape(-1, 2), rowvar=False)
 
-def detect_plant_frame(master_array, foot_indices, contact_frame, threshold=THRESHOLD):
-    """Detect the frame at which the plant foot stops moving and remains stable until ball contact."""
-    stable_frame = None
-    for i in range(contact_frame):
-        foot_coords = master_array[i, foot_indices, :2]
+    # - the foot with the lower covariance will be the plant foot. return either "left" or "right" depending on which
+    #   has the smaller covariance
+    left_det = np.linalg.det(left_foot_covariance)
+    right_det = np.linalg.det(right_foot_covariance)
 
-        # Check if all x/y coordinates are within the threshold for stability
-        if np.all(np.abs(np.diff(foot_coords, axis=0)) < threshold):
-            if stable_frame is None:
-                stable_frame = i  # Mark this as the first stable frame
-        else:
-            stable_frame = None  # Reset if any movement exceeds the threshold
-
-    if stable_frame is not None:
-        print(f"Plant foot stable starting at frame {stable_frame}")
-    else:
-        print("No stable frame detected before contact")
-
-    return stable_frame
-
-
-# Main Processing
-def main_func(kick_number):
-    # Load contact frames
-    contact_frames = load_contact_frames()
-    if contact_frames is None:
-        return
-
-    # Use contact_frames[kick_number - 1] to get the correct frame for the specified kick
-    contact_frame = int(contact_frames[kick_number - 1])  # Frame number of ball contact
-    master_array = []
-    for i in range(contact_frame):  # Load frames strictly up to ball contact
-        json_file = os.path.join(os.path.dirname(__file__),
-                                 f'../output/pose_estimation_results_1/Kick_{kick_number}_0000000000{str(i).zfill(2)}_keypoints.json')
-        pose_keypoints = load_keypoints_from_json(json_file)
-        if pose_keypoints is not None:
-            master_array.append(pose_keypoints)
-
-    master_array = np.array(master_array)
-
-    # Detect the plant foot
-    plant_foot, foot_indices = detect_plant_foot(master_array, contact_frame)
-
-    # Detect the frame of planting
-    plant_frame = detect_plant_frame(master_array, foot_indices, contact_frame)
-    print(f"Detected plant frame: {plant_frame}")
+    return "left" if left_det < right_det else "right"
 
 
 if __name__ == "__main__":
-    kick_number = 9  # Example kick number
-    main_func(kick_number)
+    kick_number = 9
+    contact_frame = load_contact_frames()[kick_number - 1]
+    print(contact_frame)
+    pose_keypoints_array = []
+    for i in range(contact_frame):
+        json_file = os.path.join(os.path.dirname(__file__), f'../output/pose_estimation_results_1/Kick_{kick_number}_0000000000{str(i).zfill(2)}_keypoints.json')
+        pose_keypoints = load_keypoints_from_json(json_file)
+        if pose_keypoints is not None:
+            pose_keypoints_array.append(pose_keypoints)
+    pose_keypoints_array = np.array(pose_keypoints_array)
+    print(pose_keypoints_array.shape)
+    ball_location = [0,0]
+    find_plant_foot(ball_location, pose_keypoints_array)
