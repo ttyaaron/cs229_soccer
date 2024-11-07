@@ -89,7 +89,6 @@ def find_plant_foot(ball_location, pose_keypoints_array):
     return ["left", left_foot_positions] if left_det < right_det else ["right", right_foot_positions]
 
 
-
 if __name__ == "__main__":
     kick_number = 9
     print("Kick Number:", kick_number)
