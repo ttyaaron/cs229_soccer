@@ -2,6 +2,7 @@ import json
 import matplotlib.pyplot as plt
 import numpy as np
 from matplotlib.animation import FuncAnimation
+import os
 
 ax = None
 limits = None
@@ -249,7 +250,7 @@ def plot_combined_animation_with_time_series(master_array, joint_indices, joint_
     # Set up the FuncAnimation with a frame generator
     fig.canvas.mpl_connect('button_press_event', on_click)
     anim = FuncAnimation(
-        fig, animate_combined, frames=frame_generator(num_frames), interval=500,
+        fig, animate_combined, frames=frame_generator(num_frames), interval=3000,
         fargs=(master_array, joint_indices, joint_names, fig, ax_pose, ax_time_series_x, ax_time_series_y, lines, frame_counter, skeleton_scale),
         blit=False  # Disable blitting for simplicity
     )
@@ -270,13 +271,16 @@ def main_func(kick_number):
     while True:
         # gather the pose key points for each frame and store into the master array
         try:
+
             if i < 10:
                 numb = str(0) + str(i)
             else:
                 numb = str(i)
-            json_file = '..\output\pose_estimation_results_1\Kick_' + str(
-                kick_number) + '_0000000000' + numb + '_keypoints.json'
-            # json_file = '/Users/nolanjetter/Desktop/Pose estimation results_batch 1/Kick_' + str(
+            src_dir = os.path.dirname(__file__)
+            src_dir = os.path.abspath(os.path.join(src_dir, '..')) # go up one level.
+            json_file = os.path.join(src_dir, 'output/pose_estimation_results_1/Kick_' + str(
+               kick_number) + '_0000000000' + numb + '_keypoints.json')
+            # json_file = '..\output\pose_estimation_results_1\Kick_' + str(
             #     kick_number) + '_0000000000' + numb + '_keypoints.json'
             pose_keypoints = load_keypoints_from_json(json_file)
             if pose_keypoints is not None:
@@ -307,7 +311,6 @@ def main_func(kick_number):
     # Unresolved Comment: plot a single frame using plot_keypoints
     if False:
         fig, ax = plt.subplots(figsize=(8, 8))  # Create a figure and axis for plotting
-        frame_to_plot = 0  # Choose which frame to plot (e.g., the first frame)
         print('first real point: ' + str(first_real_point))
         print('frame of contact: ' + str(contact_frames[kick_number]))
         adjusted_frame = contact_frames[kick_number] - first_real_point  # Plot the keypoints for the selected frame
@@ -331,7 +334,7 @@ def main_func(kick_number):
         # Set up the figure and axis for animation
         fig, ax = plt.subplots(figsize=(8, 8))
         # Create the animation, updating every 500 milliseconds
-        anim = FuncAnimation(fig, animate, frames=len(master_array), interval=1000)
+        anim = FuncAnimation(fig, animate, frames=len(master_array), interval=2000)
         plt.show()
 
     # plot the combination of animation + time-series plot of joint locations.
@@ -339,10 +342,9 @@ def main_func(kick_number):
         joint_indices = [22, 10, 14]  # Example: Left ankle, left knee, left hip
         joint_names = ["right foot", "right knee", "left ankle"]
         # Call the function to animate and plot time-series
-        plot_combined_animation_with_time_series(master_array, joint_indices, joint_names, skeleton_scale=2)
+        plot_combined_animation_with_time_series(master_array, joint_indices, joint_names, skeleton_scale=3)
 
 
 if __name__ == "__main__":
-    kick_numb = 1
+    kick_numb = 11
     main_func(kick_numb)
-
