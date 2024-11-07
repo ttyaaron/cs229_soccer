@@ -3,6 +3,7 @@ import os
 import numpy as np
 import matplotlib.pyplot as plt
 from matplotlib.animation import FuncAnimation
+import matplotlib.patches as patches
 
 # Global Variables
 ax = None
@@ -145,7 +146,9 @@ def plot_combined_animation_with_time_series(master_array, joint_groups, names, 
 
 
 def plot_joint_positions_over_time(master_array, joint_groups, names):
-    """Plot x and y positions of joint groups over time with color gradients representing time in side-by-side plots."""
+    """Plot x and y positions of joint groups over time with color gradients representing time in side-by-side plots,
+    display the mean position as a black point, and show a 1-standard deviation ellipse based on the covariance matrix.
+    Only points with confidence greater than 0 are included."""
     num_frames = master_array.shape[0]
     fig, axes = plt.subplots(1, len(joint_groups), figsize=(8 * len(joint_groups), 8))
 
@@ -157,13 +160,60 @@ def plot_joint_positions_over_time(master_array, joint_groups, names):
     color_schemes = [(0, 0, 1), (1, 0, 0)]  # RGB basis for each group
     for idx, (joints, ax) in enumerate(zip(joint_groups, axes)):
         color_base = np.array(color_schemes[idx % len(color_schemes)])  # Cycle through color schemes if needed
+
+        # Plot each frame's position with a color gradient, only including points with confidence > 0
+        frame_positions_x = []
+        frame_positions_y = []
         for frame in range(num_frames):
-            # Compute the average x, y position for the joint group at each frame
-            avg_x = np.mean(master_array[frame, joints, 0])
-            avg_y = np.mean(master_array[frame, joints, 1])
-            # Color varies with time using the base color
-            color = color_base * (frame / num_frames)
-            ax.scatter(avg_x, avg_y, color=color, label=names[idx] if frame == 0 else "")
+            valid_x = []
+            valid_y = []
+            for joint in joints:
+                # Check confidence for each joint; add only if confidence > 0
+                if master_array[frame, joint, 2] > 0:
+                    valid_x.append(master_array[frame, joint, 0])
+                    valid_y.append(master_array[frame, joint, 1])
+
+            # Compute mean x and y for valid points in this frame
+            if valid_x and valid_y:  # Only if there are valid points
+                avg_x = np.mean(valid_x)
+                avg_y = np.mean(valid_y)
+                frame_positions_x.append(avg_x)
+                frame_positions_y.append(avg_y)
+
+                # Color varies with time using the base color
+                color = color_base * (frame / num_frames)
+                ax.scatter(avg_x, avg_y, color=color, label=names[idx] if frame == 0 else "")
+
+        # Calculate and plot the mean position for the joint group, based only on valid points
+        mean_x = np.mean(frame_positions_x)
+        mean_y = np.mean(frame_positions_y)
+        ax.scatter(mean_x, mean_y, color='black', s=60, label='Mean Position')  # Black mean marker, larger size
+
+        # Calculate the covariance matrix for valid points and create a 1-std deviation ellipse
+        if frame_positions_x and frame_positions_y:  # Ensure there are points to calculate covariance
+            covariance_matrix = np.cov(frame_positions_x, frame_positions_y)
+            print(np.linalg.det(covariance_matrix))
+            eigvals, eigvecs = np.linalg.eigh(covariance_matrix)  # Get eigenvalues and eigenvectors
+
+            # Scale eigenvalues to represent 1 standard deviation
+            std_devs = np.sqrt(eigvals)
+
+            # Get the angle of the ellipse from the eigenvectors
+            angle = np.degrees(np.arctan2(eigvecs[1, 0], eigvecs[0, 0]))
+
+            # Create the ellipse patch
+            ellipse = patches.Ellipse(
+                (mean_x, mean_y),
+                width=2 * std_devs[0],
+                height=2 * std_devs[1],
+                angle=angle,
+                edgecolor='green',
+                facecolor='none',
+                linestyle='--',
+                linewidth=2,
+                label='1 Std Dev'
+            )
+            ax.add_patch(ellipse)
 
         ax.set_xlabel("X Coordinate")
         ax.set_ylabel("Y Coordinate")
@@ -172,7 +222,6 @@ def plot_joint_positions_over_time(master_array, joint_groups, names):
 
     plt.tight_layout()
     plt.show()
-
 
 # Main Processing
 def adjust_keypoints_to_ball_location(pose_keypoints, ball_location):
@@ -204,7 +253,7 @@ def main_func(kick_number, joint_groups, names, interval=1500):
         return
 
     master_array = []
-    ball_location = [200, 500]  # Define ball location here as needed
+    ball_location = [0, 0]  # Define ball location here as needed
     for i in range(30):  # Adjust the frame limit as needed
         json_file = os.path.join(os.path.dirname(__file__),
                                  f'../output/pose_estimation_results_1/Kick_{kick_number}_0000000000{str(i).zfill(2)}_keypoints.json')
