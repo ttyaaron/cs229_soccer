@@ -36,7 +36,9 @@ def find_plant_foot(ball_location, pose_keypoints_array):
 
     # Gather averaged valid positions (confidence > 0) for left and right foot joints per frame
     left_foot_positions = []
+    left_foot_positions_all = []
     right_foot_positions = []
+    right_foot_positions_all = []
 
     for frame in range(keypoints_relative_to_ball.shape[0]):
         valid_left_x = []
@@ -59,11 +61,17 @@ def find_plant_foot(ball_location, pose_keypoints_array):
             avg_left_x = np.mean(valid_left_x)
             avg_left_y = np.mean(valid_left_y)
             left_foot_positions.append([avg_left_x, avg_left_y])
+            left_foot_positions_all.append([avg_left_x, avg_left_y])
+        else:
+            left_foot_positions_all.append([0, 0])
 
         if valid_right_x and valid_right_y:
             avg_right_x = np.mean(valid_right_x)
             avg_right_y = np.mean(valid_right_y)
             right_foot_positions.append([avg_right_x, avg_right_y])
+            right_foot_positions_all.append([avg_right_x, avg_right_y])
+        else:
+            right_foot_positions_all.append([0, 0])
 
     # Convert lists to arrays for mean and covariance calculations
     left_foot_positions = np.array(left_foot_positions)
@@ -86,11 +94,33 @@ def find_plant_foot(ball_location, pose_keypoints_array):
     right_det = np.linalg.det(right_foot_covariance)
     print("right det:", right_det)
 
-    return ["left", left_foot_positions] if left_det < right_det else ["right", right_foot_positions]
+    return ["left", left_foot_positions_all] if left_det < right_det else ["right", right_foot_positions_all]
 
 
-if __name__ == "__main__":
-    kick_number = 9
+def find_plant_frame(avg_foot_positions, tol=3):
+    """
+    Finds the frame at which the plant foot becomes stationary.
+
+    Parameters:
+        foot (str): "left" or "right" indicating which foot is planted.
+        avg_foot_positions (list): Average positions of the foot in each frame.
+        tol (float): Percentage tolerance for considering the foot stationary.
+
+    Returns:
+        int: The frame number at which the foot becomes stationary.
+    """
+    for i in range(1, len(avg_foot_positions) - 2):
+        one_back = np.linalg.norm(avg_foot_positions[i] - avg_foot_positions[i-1])
+        current = np.linalg.norm(avg_foot_positions[i+1] - avg_foot_positions[i])
+        one_forward = np.linalg.norm(avg_foot_positions[i+2] - avg_foot_positions[i+1])
+        if one_back < tol and one_back != 0 and current < tol and current != 0 and one_forward < tol and one_forward != 0:
+            return i-1
+
+    return -1  # If no stationary frame is found
+
+
+def find_foot_plant_information(kick_number):
+    kick_number = 10
     print("Kick Number:", kick_number)
     contact_frame = load_contact_frames()[kick_number - 1]
     pose_keypoints_array = []
@@ -110,5 +140,7 @@ if __name__ == "__main__":
     plant_foot, foot_positions_per_frame = find_plant_foot(ball_location, pose_keypoints_array)
 
     # need to add in functionality to find the frame at which the foot is planted.
+    frame = find_plant_frame(np.array(foot_positions_per_frame))
 
     print("Plant Foot:", plant_foot)
+    print("planted on frame ", frame)
