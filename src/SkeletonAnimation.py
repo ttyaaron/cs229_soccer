@@ -276,4 +276,4 @@ if __name__ == "__main__":
     kick_number = 9
     joint_groups = [[11, 22, 23, 24], [14, 19, 20, 21]]  # Define groups of joints to average
     names = ["left foot", "right foot"]  # Define names for each group
-    main_func(kick_number, joint_groups, names, interval=1000)
+    main_func(kick_number, joint_groups, names, interval=500)
