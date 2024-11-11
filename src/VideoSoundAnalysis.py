@@ -101,7 +101,8 @@ def process_kick_videos(num_kicks, batch_number):
 
         # Save the contact frame as a PNG file in the batch-specific directory
         output_image_path = os.path.join(output_dir, f"contact_frame_{i}.png")
-        save_frame_as_image(video, ball_contact_frame, output_image_path)
+        # Assume 5 frames ago the ball hasn't been kicked.
+        save_frame_as_image(video, ball_contact_frame - 5, output_image_path)
         print(f"Contact frame saved as {output_image_path}.")
 
     # Save the contact frames as a NumPy array
