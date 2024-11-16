@@ -5,3 +5,17 @@ The document for this project is on: [Soccer Pose Processing](https://office365s
 Relevant paper: [Applying-Pose-Estimation-to-Predict-Amateur-Golf-Swing-Performance-using-Edge-Processing-February-2020](https://www.researchgate.net/publication/343446840_Applying_Pose_Estimation_to_Predict_Amateur_Golf_Swing_Performance_using_Edge_Processing_February_2020/fulltext/5f2aa704458515b72903a0fe/Applying-Pose-Estimation-to-Predict-Amateur-Golf-Swing-Performance-using-Edge-Processing-February-2020.pdf)
 
 To ensure that YOLOv5 can detect the ball, the ".png" of contact_frames are actually the frames before the soccer is kicked.
+
+## Dataset
+- Data_labels.npy:
+Each row represents a training example. The columns represent different labels. From 0 -> 6 they are as follows:
+0. kick number,
+1. foot (left or right), 
+2. direction (left=0, center=1, or right=2), 
+3. height (low=0, center=1, high=2), 
+4. type (curl=0, laces=1), 
+5. quality (poor=1, average=2, good=3), 
+6. spin (right, left, top, back, knuckle). 
+
+## Preprocessing Result
+See file \output\Preprocessed_keypoints_1.npy. This is the numpy array containing the preprocessed data. It is of shape (20,2,25,2). (num_samples, frame, keypoints, x/y). Where frame[0] = contact frame, and frame[1] = plant foot frame. 
