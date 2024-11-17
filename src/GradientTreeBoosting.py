@@ -1,3 +1,7 @@
+# This py file is not a part of the project.
+# It is a demo (an example code) of xgboost
+
+
 import numpy as np
 import xgboost as xgb
 from sklearn.model_selection import train_test_split

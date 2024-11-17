@@ -3,6 +3,10 @@ import numpy as np
 
 
 def preprocess_image(image, gamma=1.2):
+    # By applying both CLAHE and gamma correction, the function enhances 
+    # the overall clarity of the image while minimizing the impact of 
+    # varying lighting conditions.
+
     # Convert to HSV color space
     hsv = cv2.cvtColor(image, cv2.COLOR_BGR2HSV)
     h, s, v = cv2.split(hsv)
@@ -233,6 +237,8 @@ white_lines = []
 white_vertical_lines = []
 white_horizontal_lines = []
 
+# Filter lines based on their color (white in this case).
+# Further categorize white lines into vertical or horizontal groups.
 for line in lines:
     if is_white_line(line, processed_image):
         white_lines.append(line)
