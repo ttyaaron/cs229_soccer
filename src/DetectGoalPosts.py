@@ -26,8 +26,8 @@ def preprocess_image(image, gamma=1.2):
 
 
 # Load in the video directory
-kick_number = 15
-session_number = 3
+kick_number = 5
+session_number = 1
 video_directory = "/Users/nolanjetter/Documents/GitHub/cs229_soccer/dataset/Session " + str(session_number) +"/Kick " + str(kick_number) + ".mp4"
 ball_coordinates = "/Users/nolanjetter/Documents/GitHub/cs229_soccer/output/Session " + str(session_number) + "/Ball_coordinates.npy"
 ball_coordinate = ball_coordinates[kick_number]

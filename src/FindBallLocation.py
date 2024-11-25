@@ -4,24 +4,27 @@ import os
 import json
 
 
-def load_contact_frames(filename="contact_frames.npy"):
+def load_contact_frames(batch_number):
     """Load the array representing frames of ball contact."""
     try:
-        return np.load(filename)
+        current_dir = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+        filename = "output/Batch 2/contact_frames_2/contact_frames.npy"
+        final_path = os.path.join(current_dir, filename)
+        return np.load(final_path)
     except FileNotFoundError:
         print(f"Error: {filename} not found.")
         return None
 
 
-def build_video_path(src_dir, video_number):
+def build_video_path(src_dir, video_number, batch_number):
     """Build the video path based on the video number."""
-    return os.path.join(src_dir, f'../dataset/Session 1/kick {video_number}.mp4')
+    return os.path.join(src_dir, f'../dataset/Session {batch_number}/kick {video_number}.mp4')
 
 
-def build_pose_estimation_path(src_dir, video_number, frame_number):
+def build_pose_estimation_path(src_dir, video_number, frame_number, batch_number):
     """Build the path for the pose estimation JSON file based on video and frame number."""
     frame_str = str(frame_number).zfill(2)  # Ensure consistent zero-padding
-    return os.path.join(src_dir, f'../output/pose_estimation_results_1/Kick_{video_number}_0000000000{frame_str}_keypoints.json')
+    return os.path.join(src_dir, f'../output/pose_estimation_results_{batch_number}/Kick {video_number}_0000000000{frame_str}_keypoints.json')
 
 
 def open_video(video_path, target_frame=0):
@@ -109,41 +112,115 @@ def draw_annotations(frame, left_foot, right_foot, closest_ball):
     return frame
 
 
-def FindBallLocation(video_number):
+def user_find_ball(video_path):
+    """Refine ball location by letting the user click on the image."""
+    curr_frame = 0
+    cap, frame = open_video(video_path, curr_frame)
+    if frame is None:
+        return None
+
+    coordinates = []
+
+    def click_event(event, x, y, flags, param):
+        nonlocal coordinates
+        if event == cv2.EVENT_LBUTTONDOWN:
+            if coordinates:
+                last_x, last_y = coordinates[-1]
+                distance = np.sqrt((x - last_x) ** 2 + (y - last_y) ** 2)
+                if distance < 50:  # Double-click at the same location
+                    avg_x = (last_x + x) // 2
+                    avg_y = (last_y + y) // 2
+                    print(f"Ball location determined at: ({avg_x}, {avg_y})")
+                    coordinates.append((avg_x, avg_y))
+                    return
+            coordinates.append((x, y))
+
+    cv2.namedWindow("Select Ball Location")
+    cv2.setMouseCallback("Select Ball Location", click_event)
+
+    while len(coordinates) < 2:  # Allow up to 2 clicks
+        ret, frame = cap.read()
+        if not ret:
+            print("End of video reached or error loading frame.")
+            break
+
+        cv2.imshow("Select Ball Location", frame)
+        key = cv2.waitKey(1)
+        if key == ord('q'):  # Quit selection
+            break
+
+    cap.release()
+    cv2.destroyAllWindows()
+
+    # Return the average location if two clicks were made
+    if len(coordinates) >= 2:
+        avg_x, avg_y = np.mean(coordinates, axis=0).astype(int)
+        return avg_x, avg_y
+    return -1, -1
+
+
+def FindBallLocation(video_number, batch_number):
     """Main function to perform ball location analysis on a specified video."""
-    contact_frames = load_contact_frames()
+    print("Finding ball location on video", video_number)
+    contact_frames = load_contact_frames(batch_number)
     if contact_frames is None or video_number < 1 or video_number > len(contact_frames):
         print(f"Invalid video number {video_number}.")
         return
 
     frame_number = contact_frames[video_number - 1]  # Adjust for zero-indexing
     src_dir = os.path.dirname(__file__)
-    video_path = build_video_path(src_dir, video_number)
-    pose_estimation_path = build_pose_estimation_path(src_dir, video_number, frame_number)
+    video_path = build_video_path(src_dir, video_number, batch_number)
+    pose_estimation_path = build_pose_estimation_path(src_dir, video_number, frame_number, batch_number)
 
     # Open video and load pose data
-    cap, frame = open_video(video_path, target_frame=0)
+    cap, frame = open_video(video_path, target_frame=2)
     if frame is None:
         return
     pose_data = load_pose_data(pose_estimation_path)
 
     # Determine foot positions
-    left_foot_joints = [11, 22, 23, 24, 9, 10]  # Left ankle, heel, big toe
-    right_foot_joints = [14, 19, 20, 21, 12, 13]  # Right ankle, heel, big toe
+    left_foot_joints = [11, 22, 23, 24]  # Left ankle, heel, big toe
+    right_foot_joints = [14, 19, 20, 21]  # Right ankle, heel, big toe
     left_foot = get_foot_position(pose_data, left_foot_joints)
     right_foot = get_foot_position(pose_data, right_foot_joints)
 
     # Detect circles and find the closest ball
     circles = detect_circles(frame)
-    if circles is None:
-        print("No circles detected.")
-        cap.release()
-        return
-    closest_ball = find_closest_ball(circles, left_foot, right_foot)
+    closest_ball = find_closest_ball(circles, left_foot, right_foot) if circles is not None else None
 
-    # Draw annotations and display
-    annotated_frame = draw_annotations(frame, left_foot, right_foot, closest_ball)
-    cv2.imshow('Detected Soccer Ball', annotated_frame)
-    cv2.waitKey(0)
+    ball_found = closest_ball is not None
+    manual_coordinates = []
+
+    def click_event(event, x, y, flags, param):
+        nonlocal manual_coordinates
+        if event == cv2.EVENT_LBUTTONDOWN:
+            if len(manual_coordinates) == 1:
+                last_x, last_y = manual_coordinates[0]
+                distance = np.sqrt((x - last_x) ** 2 + (y - last_y) ** 2)
+                if distance < 50:  # Double-click to confirm the new location
+                    avg_x = (last_x + x) // 2
+                    avg_y = (last_y + y) // 2
+                    manual_coordinates.append((avg_x, avg_y))
+            else:
+                manual_coordinates.append((x, y))
+
+    # Attach mouse callback
+    cv2.namedWindow("Detected Soccer Ball")
+    cv2.setMouseCallback("Detected Soccer Ball", click_event)
+    while True:
+        # Annotate the frame
+        annotated_frame = draw_annotations(frame.copy(), left_foot, right_foot, closest_ball)
+        cv2.imshow('Detected Soccer Ball', annotated_frame)
+
+        key = cv2.waitKey(0)
+        if key == ord('q'):  # Skip to the next frame
+            break
+        elif len(manual_coordinates) == 2:  # Manually set location by double-clicking
+            avg_x, avg_y = np.mean(manual_coordinates, axis=0).astype(int)
+            closest_ball = (avg_x, avg_y, 1)
+            break
+    if len(manual_coordinates) > 0:
+        closest_ball = (manual_coordinates[-1][0], manual_coordinates[-1][1], 1)
     cv2.destroyAllWindows()
     cap.release()
+    return closest_ball

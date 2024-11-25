@@ -143,7 +143,6 @@ def find_plant_frame(avg_foot_positions, tol=3):
 
 
 def find_foot_plant_information(kick_number):
-    kick_number = 10
     print("Kick Number:", kick_number)
     contact_frame = load_contact_frames()[kick_number - 1]
     pose_keypoints_array = []
