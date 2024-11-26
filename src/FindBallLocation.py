@@ -8,7 +8,7 @@ def load_contact_frames(batch_number):
     """Load the array representing frames of ball contact."""
     try:
         current_dir = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
-        filename = "output/Batch 2/contact_frames_2/contact_frames.npy"
+        filename = f"output/Batch {batch_number}/contact_frames_{batch_number}/contact_frames.npy"
         final_path = os.path.join(current_dir, filename)
         return np.load(final_path)
     except FileNotFoundError:
@@ -24,7 +24,10 @@ def build_video_path(src_dir, video_number, batch_number):
 def build_pose_estimation_path(src_dir, video_number, frame_number, batch_number):
     """Build the path for the pose estimation JSON file based on video and frame number."""
     frame_str = str(frame_number).zfill(2)  # Ensure consistent zero-padding
-    return os.path.join(src_dir, f'../output/pose_estimation_results_{batch_number}/Kick {video_number}_0000000000{frame_str}_keypoints.json')
+    if batch_number == 1:
+        return os.path.join(src_dir, f'../output/pose_estimation_results_{batch_number}/Kick_{video_number}_0000000000{frame_str}_keypoints.json')
+    else:
+        return os.path.join(src_dir, f'../output/pose_estimation_results_{batch_number}/Kick {video_number}_0000000000{frame_str}_keypoints.json')
 
 
 def open_video(video_path, target_frame=0):
@@ -40,6 +43,7 @@ def open_video(video_path, target_frame=0):
 
 def load_pose_data(pose_estimation_path):
     """Load pose estimation data from a JSON file."""
+    print(pose_estimation_path)
     with open(pose_estimation_path, 'r') as f:
         pose_data = json.load(f)
     return pose_data
@@ -171,6 +175,8 @@ def FindBallLocation(video_number, batch_number):
     src_dir = os.path.dirname(__file__)
     video_path = build_video_path(src_dir, video_number, batch_number)
     pose_estimation_path = build_pose_estimation_path(src_dir, video_number, frame_number, batch_number)
+    print(f"pose estimation path: {pose_estimation_path}")
+    print(f"video path: {video_path}")
 
     # Open video and load pose data
     cap, frame = open_video(video_path, target_frame=2)
@@ -223,4 +229,60 @@ def FindBallLocation(video_number, batch_number):
         closest_ball = (manual_coordinates[-1][0], manual_coordinates[-1][1], 1)
     cv2.destroyAllWindows()
     cap.release()
+    return closest_ball
+
+
+def FindNextBallLocation(frame_number, batch_number, video_number, prev_ball_location):
+    """
+    Function to determine the location of the ball in a specific frame based on the previous frame's ball location.
+    Displays all detected circles with bounding rectangles.
+    """
+    src_dir = os.path.dirname(__file__)
+    video_path = build_video_path(src_dir, video_number, batch_number)
+
+    # Open the video at the target frame
+    cap, frame = open_video(video_path, target_frame=frame_number)
+    if frame is None:
+        print(f"Could not load frame {frame_number} from video {video_number}.")
+        return None
+
+    # Detect circles in the frame
+    circles = detect_circles(frame)
+    if circles is None:
+        print("No potential balls detected in the frame.")
+        return None
+
+    # Draw bounding rectangles around all detected circles
+    for (x, y, r) in circles:
+        top_left = (int(x - r), int(y - r))
+        bottom_right = (int(x + r), int(y + r))
+        cv2.rectangle(frame, top_left, bottom_right, (0, 255, 0), 2)  # Green rectangle
+
+    # Display the frame with rectangles
+    cv2.imshow("Detected Balls", frame)
+
+    # Wait for any key press
+    print("Press any key to continue to the next frame.")
+    cv2.waitKey(0)  # Wait indefinitely for a key press
+
+    # Find the circle closest to the previous ball location
+    closest_ball = None
+    min_distance = float('inf')
+
+    for (x, y, r) in circles:
+        distance = np.sqrt((x - prev_ball_location[0]) ** 2 + (y - prev_ball_location[1]) ** 2)
+        if distance < min_distance:
+            min_distance = distance
+            closest_ball = (x, y, r)
+
+    # If no valid ball is found, notify the user
+    if closest_ball is None:
+        print("Could not find a valid ball close to the previous location.")
+    else:
+        print(f"Ball found at: {closest_ball[:2]} with radius {closest_ball[2]}.")
+
+    # Release resources
+    cap.release()
+    cv2.destroyAllWindows()
+
     return closest_ball

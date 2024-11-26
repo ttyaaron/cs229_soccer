@@ -4,8 +4,8 @@ from FindBallLocation import FindBallLocation
 from VideoSoundAnalysis import process_kick_videos
 from FindFirstPhase import find_foot_plant_information
 
-num_kicks = 42  # Adjust this to the number of kick videos you have
-batch_number = 3  # Set your batch number here
+num_kicks = 20  # Adjust this to the number of kick videos you have
+batch_number = 1  # Set your batch number here
 
 # ---------------------------------------------------------------
 # Using the video sound analysis module, generate a list corresponding to the frame of impact.
@@ -20,15 +20,17 @@ for i in range(1, num_kicks):
     return_val = FindBallLocation(i, batch_number)
     print(f"return value: {return_val}")
     ball_location.append(return_val)
-np.save(f"/Users/nolanjetter/Documents/GitHub/Soccer ML Project Main/output/Batch {batch_number}/ball_locations.npy", ball_location, allow_pickle=True)
+np.save(f"/Users/nolanjetter/Documents/GitHub/Soccer ML Project Main/output/Batch {batch_number}/ball_locations.npy",
+        ball_location, allow_pickle=True)
 # ---------------------------------------------------------------
 
 # ---------------------------------------------------------------
 # find which foot is the plant foot and the frame the foot is planted.
-plant_foot_info = []
-for i in range(1, num_kicks):
-    plant_foot_info.append(find_foot_plant_information(i))
-np.save("/Users/nolanjetter/Documents/GitHub/Soccer ML Project Main/output/Batch 2/plant_foot.npy", plant_foot_info, allow_pickle=True)
+# plant_foot_info = []
+# for i in range(1, num_kicks):
+#     plant_foot_info.append(find_foot_plant_information(i, batch_number))
+# np.save(f"/Users/nolanjetter/Documents/GitHub/Soccer ML Project Main/output/Batch {batch_number}/plant_foot.npy",
+#         plant_foot_info, allow_pickle=True)
 # # ---------------------------------------------------------------
 
 
