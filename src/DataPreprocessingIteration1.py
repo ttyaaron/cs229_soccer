@@ -4,8 +4,8 @@ from FindBallLocation import FindBallLocation
 from VideoSoundAnalysis import process_kick_videos
 from FindFirstPhase import find_foot_plant_information
 
-num_kicks = 20  # Adjust this to the number of kick videos you have
-batch_number = 1  # Set your batch number here
+num_kicks = 42  # Adjust this to the number of kick videos you have
+batch_number = 3  # Set your batch number here
 
 # ---------------------------------------------------------------
 # Using the video sound analysis module, generate a list corresponding to the frame of impact.
@@ -15,11 +15,13 @@ batch_number = 1  # Set your batch number here
 
 # ---------------------------------------------------------------
 # Using the Soccer Ball Location module, find the location of the soccer ball
-ball_location = []
-for i in range(1, num_kicks):
+ball_location = np.load(f"/Users/nolanjetter/Documents/GitHub/Soccer ML Project Main/output/Batch {batch_number}/ball_locations.npy", allow_pickle=True)
+print(ball_location.shape)
+for i in range(num_kicks, num_kicks+1):
     return_val = FindBallLocation(i, batch_number)
     print(f"return value: {return_val}")
-    ball_location.append(return_val)
+    ball_location = np.append(ball_location, np.array(return_val).reshape(1, -1), axis=0)
+print(ball_location.shape)
 np.save(f"/Users/nolanjetter/Documents/GitHub/Soccer ML Project Main/output/Batch {batch_number}/ball_locations.npy",
         ball_location, allow_pickle=True)
 # ---------------------------------------------------------------

@@ -57,7 +57,7 @@ def rpca(M, lamb=None, tol=1e-7, max_iter=1000):
     return L, S
 
 
-def visualize_rpca_results(L, S, frame_shape):
+def visualize_rpca_results(S, frame_shape):
     """
     Visualize the low-rank and sparse components.
 
@@ -66,18 +66,11 @@ def visualize_rpca_results(L, S, frame_shape):
         S (numpy.ndarray): Sparse matrix (foreground).
         frame_shape (tuple): Original frame dimensions (height, width).
     """
-    num_frames = L.shape[1]
+    num_frames = S.shape[1]
     for i in range(num_frames):
         # Reshape columns back to original frame size
-        low_rank_frame = L[:, i].reshape(frame_shape)
         sparse_frame = S[:, i].reshape(frame_shape)
 
-        # Display the results
-        plt.figure(figsize=(10, 5))
-        plt.subplot(1, 2, 1)
-        plt.title("Low-Rank (Background)")
-        plt.imshow(low_rank_frame, cmap='gray')
-        plt.subplot(1, 2, 2)
         plt.title("Sparse (Foreground)")
         plt.imshow(sparse_frame, cmap='gray')
         plt.show()
@@ -97,12 +90,10 @@ def load_video_frames(video_path, max_frames=100, use_color=False, downscale_fac
         numpy.ndarray: Data matrix (flattened frames as columns).
     """
     cap = cv2.VideoCapture(video_path)
-    print(cap.get(cv2.CAP_PROP_FRAME_COUNT))
     frames = []
     frame_count = 0
     frame_dimensions = []
     while len(frames) < max_frames:
-        print(f"{len(frames)} processed")
         ret, frame = cap.read()
         if not ret:
             break
@@ -163,61 +154,33 @@ def find_circles(gray_image, dp=1, min_dist=20, param1=20, param2=15, min_radius
 
 if __name__ == "__main__":
     # Example usage
-    # batch_number = 1  # Replace with user input or configuration
-    # for video_number in range(1, 21):
-    #     # Extract the matrix to be decomposed
-    #     parent_dir = os.path.dirname(__file__)
-    #     child_dir = f"../dataset/Session {batch_number}/Kick {video_number}.mp4"
-    #     file_path = os.path.join(parent_dir, child_dir)
-    #     M, frame_shape = load_video_frames(file_path)
+    # batch_number = 3  # Replace with user input or configuration
+    # video_number = 25
+    # keep_iterating = True
+    # while keep_iterating:
+    #     try:
+    #         # Extract the matrix to be decomposed
+    #         parent_dir = os.path.dirname(__file__)
+    #         child_dir = f"../dataset/Session {batch_number}/Kick {video_number}.mp4"
+    #         file_path = os.path.join(parent_dir, child_dir)
+    #         M, frame_shape = load_video_frames(file_path)
     #
-    #     # Apply RPCA
-    #     L, S = rpca(M)
-    #     print(f"Done with RPCA. kick number {video_number}")
+    #         # Apply RPCA
+    #         L, S = rpca(M)
+    #         print(f"Done with RPCA. kick number {video_number}")
     #
-    #     # Save sparse representation
-    #     save_directory = "/Users/nolanjetter/Documents/GitHub/Soccer ML Project Main/output/RPCA_Results"
-    #     os.makedirs(save_directory, exist_ok=True)  # Ensure the directory exists
-    #     save_path = os.path.join(save_directory, f"sparse_sample_{video_number}")
-    #     np.save(save_path, S, allow_pickle=True)
-    M, frame_shape = load_video_frames("/Users/nolanjetter/Documents/GitHub/Soccer ML Project Main/dataset/Session 1/Kick 1.mp4")
-    S_matrix = np.load("/Users/nolanjetter/Documents/GitHub/Soccer ML Project Main/output/Batch 1/RPCA_Results/sparse_sample_1.npy", allow_pickle=True)
-    S_matrix = S_matrix[:, 50].reshape(frame_shape)
-    print(frame_shape)
-    if S_matrix.dtype != np.uint8:
-        S_matrix = cv2.normalize(S_matrix, None, 0, 255, cv2.NORM_MINMAX).astype(np.uint8)
-    matrix_cut = S_matrix[469:507, 289:326]
-    blurred_matrix = cv2.GaussianBlur(S_matrix, (5, 5), 0)
-    # plt.subplot(1,2,1)
-    # plt.title("original")
-    # plt.imshow(S_matrix, cmap="gray")
-    # plt.subplot(1,2,2)
-    # plt.title("gaussian blurred")
-    # plt.imshow(blurred_matrix, cmap="gray")
-    # plt.show()
-    # plt.figure()
+    #         # Save sparse representation
+    #         save_directory = f"/Users/nolanjetter/Documents/GitHub/Soccer ML Project Main/output/Batch {batch_number}/RPCA_Results"
+    #         os.makedirs(save_directory, exist_ok=True)  # Ensure the directory exists
+    #         save_path = os.path.join(save_directory, f"sparse_sample_{video_number}")
+    #         np.save(save_path, S, allow_pickle=True)
+    #         video_number += 1
+    #     except:
+    #         keep_iterating = False
+    #         video_number = 1
 
-    circles = find_circles(blurred_matrix)
-    print(len(circles))
-    if circles is not None:
-        for circle in circles[0, :]:
-            # Draw the circles on the image
-            center = (circle[0], circle[1])  # Circle center
-            radius = circle[2]  # Circle radius
-            if radius < 30:
-                cv2.circle(blurred_matrix, center, radius, (255, 255, 0), 1)  # Draw the circle
-    else:
-        print("No circles found.")
+    # visualize the sparse matrix
 
-
-    display_image = blurred_matrix.copy()
-
-    def click_event(event, x, y, flags, param):
-        if event == cv2.EVENT_LBUTTONDOWN:  # Left mouse button click
-            print(f"Clicked at: ({x}, {y})")
-
-    cv2.namedWindow("Detected Circles")
-    cv2.setMouseCallback("Detected Circles", click_event, display_image)
-    cv2.imshow("Detected Circles", display_image)
-    cv2.waitKey(0)
-    cv2.destroyAllWindows()
+    M, frame_shape = load_video_frames("/Users/nolanjetter/Documents/GitHub/Soccer ML Project Main/dataset/Session 2/Kick 1.mp4")
+    S_matrix = np.load("/Users/nolanjetter/Documents/GitHub/Soccer ML Project Main/output/Batch 2/RPCA_Results/sparse_sample_1.npy", allow_pickle=True)
+    visualize_rpca_results(S_matrix, frame_shape)

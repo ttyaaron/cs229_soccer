@@ -49,7 +49,10 @@ def display_frame_with_pose(video_number, frame_number, session_number):
 
     # Paths for video and pose estimation data
     video_path = os.path.join(repo_root, f'dataset/Session {session_number}/kick {video_number}.mp4')
-    json_file = os.path.join(repo_root, f'output/pose_estimation_results_{session_number}/Kick {video_number}_0000000000{str(frame_number).zfill(2)}_keypoints.json')
+    if session_number == 1:
+        json_file = os.path.join(repo_root, f'output/pose_estimation_results_{session_number}/Kick_{video_number}_0000000000{str(frame_number).zfill(2)}_keypoints.json')
+    else:
+        json_file = os.path.join(repo_root, f'output/pose_estimation_results_{session_number}/Kick {video_number}_0000000000{str(frame_number).zfill(2)}_keypoints.json')
 
     # Load pose data
     keypoints = load_keypoints_from_json(json_file)
@@ -79,11 +82,11 @@ def display_frame_with_pose(video_number, frame_number, session_number):
     cap.release()
 
 # Example usage:
-session_number = 2
+session_number = 1
 video_number = 1
 src_dir = os.path.dirname(os.path.abspath(__file__))
 repo_root = os.path.dirname(src_dir)
-contact_frames_path = os.path.join(repo_root, f'output/contact_frames_{session_number}/contact_frames.npy')
+contact_frames_path = os.path.join(repo_root, f'output/Batch {session_number}/contact_frames_{session_number}/contact_frames.npy')
 contact_frames = np.load(contact_frames_path)
 frame_number = contact_frames[video_number - 1]
 display_frame_with_pose(video_number, frame_number, session_number)

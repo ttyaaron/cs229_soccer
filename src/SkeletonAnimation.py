@@ -25,18 +25,6 @@ POSE_CONNECTIONS = [
 ]
 
 
-# Data Loading
-def load_contact_frames(filename=FILENAME):
-    """Load the array representing frames of ball contact."""
-    try:
-        contact_frames = np.load(filename)
-        print(f"Successfully loaded {filename}. Shape: {contact_frames.shape}")
-        return contact_frames
-    except FileNotFoundError:
-        print(f"Error: {filename} not found.")
-        return None
-
-
 def load_keypoints_from_json(json_file):
     """Load pose keypoints from a JSON file."""
     with open(json_file, 'r') as f:
@@ -47,18 +35,53 @@ def load_keypoints_from_json(json_file):
 
 
 # Plotting
-def plot_keypoints(ax, pose_keypoints):
-    """Plot the 2D pose keypoints on the given axis."""
+def plot_keypoints(ax, pose_keypoints, goal_post, ball_trajectory, contact_frame, number_empty_frames, current_frame, scale_factor=1):
+    """Plot the 2D pose keypoints, goalposts, and ball trajectory on the given axis."""
     xs, ys, confidences = pose_keypoints[:, 0], pose_keypoints[:, 1], pose_keypoints[:, 2]
-
+    xs *= scale_factor
+    ys *= scale_factor
     ax.clear()
-    ax.set_xlim(limits[0] - 100, limits[1] + 100)
-    ax.set_ylim(limits[2] - 100, limits[3] + 100)
+    midpoint_x = 900
+    midpoint_y = 600
+
+    ax.set_xlim(midpoint_x-600, midpoint_x+600)
+    ax.set_ylim(midpoint_y-600, midpoint_y+600)
     ax.scatter(xs, ys, c='red', s=30, label='Keypoints')
 
+    # Plot pose connections
     for (start, end) in POSE_CONNECTIONS:
         if confidences[start] > 0 and confidences[end] > 0:
             ax.plot([xs[start], xs[end]], [ys[start], ys[end]], 'b-', linewidth=2)
+
+    # Plot goalposts
+    for post in goal_post:
+        x1, y1, x2, y2 = post[0] * scale_factor
+        ax.plot([x1, x2], [y1, y2], 'g-', linewidth=2, label='Goalpost')
+
+    # Plot ball trajectory as a blue rectangle
+    trajectory_frame = current_frame - (contact_frame - number_empty_frames) + 8
+    print(f"contact frame: {contact_frame}")
+    print(f"number of empty frames in the beginning: {number_empty_frames}")
+    print(f"contact - empty: {contact_frame-number_empty_frames}")
+    print(f"current frame: {current_frame}")
+    if trajectory_frame == 0:
+        print("hit the ball")
+    if 0 <= trajectory_frame < len(ball_trajectory):
+        ball_x, ball_y, _, _ = ball_trajectory[trajectory_frame]
+        ball_x *= scale_factor
+        ball_y *= scale_factor
+        ball_size = 50 * scale_factor
+        ball_rect = patches.Rectangle(
+            (ball_x - ball_size / 2, ball_y - ball_size / 2),  # Bottom-left corner
+            ball_size,  # Width
+            ball_size,  # Height
+            edgecolor='blue',  # Border color
+            facecolor='none',  # No fill color
+            linewidth=3,  # Thickness of the border
+            label='Ball',
+            zorder=1
+        )
+        ax.add_patch(ball_rect)
 
     ax.invert_yaxis()
     ax.axis('off')
@@ -80,65 +103,61 @@ def frame_generator(num_frames):
             yield None
 
 
-def animate_combined(i, master_array, joint_groups, names, fig, ax_pose, ax_time_series_x, ax_time_series_y,
-                     lines_x, lines_y, frame_counter, skeleton_scale):
+def animate_combined(i, master_array, joint_groups, names, goal_post, ball_trajectory, contact_frame, number_empty_frames,
+                     fig, ax_pose, ax_time_series_x, ax_time_series_y, lines_x, lines_y, frame_counter, skeleton_scale):
     global paused
     if paused:
         return lines_x, lines_y, frame_counter
 
-    plot_keypoints(ax_pose, master_array[i])
+    ax_pose.clear()  # Clear the axis before plotting
+    plot_keypoints(ax_pose, master_array[i], goal_post, ball_trajectory, contact_frame, number_empty_frames, i)
 
+    # Update time-series plots
     for idx, joints in enumerate(joint_groups):
-        # Calculate the average position of the specified joints for the time series plot
         avg_x = np.mean(master_array[:i + 1, joints, 0], axis=1)
         avg_y = np.mean(master_array[:i + 1, joints, 1], axis=1)
-
-        # Update the time-series plot with averaged trajectories
         lines_x[idx].set_data(range(i + 1), avg_x)
         lines_y[idx].set_data(range(i + 1), avg_y)
 
     frame_counter.set_text(f"Frame: {i}")
-
     return lines_x + lines_y + [frame_counter]
 
 
-def plot_combined_animation_with_time_series(master_array, joint_groups, names, skeleton_scale=2, interval=1500):
+def plot_combined_animation_with_time_series(master_array, joint_groups, names, goal_post, ball_trajectory, contact_frame,
+                                             number_empty_frames, skeleton_scale=1, interval=1500):
     num_frames = master_array.shape[0]
-
     fig, (ax_pose, ax_time_series_x, ax_time_series_y) = plt.subplots(1, 3, figsize=(15, 6))
 
-    # Initialize time-series lines for each group
+    # Initialize time-series lines
     lines_x = []
     lines_y = []
-
     for name in names:
         line_x, = ax_time_series_x.plot([], [], label=f"{name} X")
         line_y, = ax_time_series_y.plot([], [], label=f"{name} Y")
         lines_x.append(line_x)
         lines_y.append(line_y)
 
-    # Time-series plot settings for X coordinates
+    # Configure time-series plots
     ax_time_series_x.set_xlim(0, num_frames)
-    ax_time_series_x.set_ylim(np.min(master_array[:, :, 0]) - 50,
-                              np.max(master_array[:, :, 0]) + 50)
+    ax_time_series_x.set_ylim(np.min(master_array[:, :, 0]) - 50, np.max(master_array[:, :, 0]) + 50)
     ax_time_series_x.set_title("Average Joint X Coordinates Over Time")
     ax_time_series_x.legend()
 
-    # Time-series plot settings for Y coordinates
     ax_time_series_y.set_xlim(0, num_frames)
-    ax_time_series_y.set_ylim(np.min(master_array[:, :, 1]) - 50,
-                              np.max(master_array[:, :, 1]) + 50)
+    ax_time_series_y.set_ylim(np.min(master_array[:, :, 1]) - 50, np.max(master_array[:, :, 1]) + 50)
     ax_time_series_y.set_title("Average Joint Y Coordinates Over Time")
     ax_time_series_y.legend()
 
-    # Frame counter for pose plot
     frame_counter = ax_pose.text(0.5, 0.9, '', transform=ax_pose.transAxes, ha='center', va='center', fontsize=12)
 
-    fig.canvas.mpl_connect('button_press_event', on_click)
+    # Create animation
     anim = FuncAnimation(
-        fig, animate_combined, frames=frame_generator(num_frames), interval=interval,
-        fargs=(master_array, joint_groups, names, fig, ax_pose, ax_time_series_x, ax_time_series_y,
-               lines_x, lines_y, frame_counter, skeleton_scale),
+        fig,
+        animate_combined,
+        frames=frame_generator(num_frames),
+        interval=interval,
+        fargs=(master_array, joint_groups, names, goal_post, ball_trajectory, contact_frame, number_empty_frames, fig,
+               ax_pose, ax_time_series_x, ax_time_series_y, lines_x, lines_y, frame_counter, skeleton_scale),
         blit=False
     )
     plt.tight_layout()
@@ -245,35 +264,68 @@ def calculate_limits(keypoints_array):
     return min(all_x), max(all_x), min(all_y), max(all_y)
 
 
-def main_func(kick_number, joint_groups, names, interval=1500):
+def main_func(kick_number, session_number, joint_groups, names, interval=1500):
     global master_array, limits
-
-    contact_frames = load_contact_frames()
+    # load in the necessary files
+    src_dir = os.path.dirname(os.path.abspath(__file__))
+    repo_root = os.path.dirname(src_dir)
+    # load contact frames
+    contact_frames_path = os.path.join(repo_root, f'output/Batch {session_number}/contact_frames_{session_number}/contact_frames.npy')
+    contact_frames = np.load(contact_frames_path)
+    print(f" contact frame: {contact_frames[kick_number]}")
     if contact_frames is None:
+        print("could not load contact frames")
         return
+    # load in the goalpost
+    goal_post_path = os.path.join(repo_root, f'output/Batch {session_number}/GoalPosts/sample_{kick_number}.npy')
+    goal_post = np.load(goal_post_path, allow_pickle=True)
+    print(f"goal post: {goal_post}")
+    if goal_post is None:
+        print("could not load the goalpost")
+        return
+    # load in the ball trajectory
+    ball_trajectory_path = os.path.join(repo_root, f'output/Batch {session_number}/Ball Trajectories/sample_{kick_number}.npy')
+    ball_trajectory = np.load(ball_trajectory_path)
+    print(ball_trajectory)
+    if ball_trajectory is None:
+        print("could not load the ball trajectory")
+        return
+
 
     master_array = []
     ball_location = [0, 0]  # Define ball location here as needed
-    for i in range(30):  # Adjust the frame limit as needed
-        json_file = os.path.join(os.path.dirname(__file__),
-                                 f'../output/pose_estimation_results_1/Kick_{kick_number}_0000000000{str(i).zfill(2)}_keypoints.json')
-        pose_keypoints = load_keypoints_from_json(json_file)
-        if pose_keypoints is not None:
-            adjusted_keypoints = adjust_keypoints_to_ball_location(pose_keypoints, ball_location)
-            master_array.append(adjusted_keypoints)
-
+    i = 0
+    error_check = True
+    number_empty_frames = 0
+    is_beginning = True
+    while error_check:  # Adjust the frame limit as needed
+        try:
+            json_file = os.path.join(os.path.dirname(__file__),
+                                     f'../output/pose_estimation_results_1/Kick_{kick_number}_0000000000{str(i).zfill(2)}_keypoints.json')
+            pose_keypoints = load_keypoints_from_json(json_file)
+            if pose_keypoints is not None:
+                #adjusted_keypoints = adjust_keypoints_to_ball_location(pose_keypoints, ball_location)
+                master_array.append(pose_keypoints)
+                is_beginning = False
+            else:
+                if is_beginning:
+                    number_empty_frames += 1
+            i += 1
+        except:
+            error_check = False
     master_array = np.array(master_array)
     limits = calculate_limits(master_array)
 
     # Plot combined animation with time series
-    plot_combined_animation_with_time_series(master_array, joint_groups, names, skeleton_scale=3, interval=interval)
+    plot_combined_animation_with_time_series(master_array, joint_groups, names, goal_post, ball_trajectory, contact_frames[kick_number], number_empty_frames, skeleton_scale=1, interval=interval)
 
     # Plot joint positions over time
     plot_joint_positions_over_time(master_array, joint_groups, names)
 
 
 if __name__ == "__main__":
-    kick_number = 9
+    kick_number = 1
+    session_number = 1
     joint_groups = [[11, 22, 23, 24], [14, 19, 20, 21]]  # Define groups of joints to average
     names = ["left foot", "right foot"]  # Define names for each group
-    main_func(kick_number, joint_groups, names, interval=500)
+    main_func(kick_number, session_number, joint_groups, names, interval=500)
