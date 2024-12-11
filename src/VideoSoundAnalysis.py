@@ -76,11 +76,11 @@ def process_kick_videos(num_kicks, batch_number):
     contact_frames = []  # Array to store ball contact frames
 
     # Define the output directory for this batch
-    output_dir = f"..\\output\\contact_frames_{batch_number}"
+    output_dir = os.path.join("..", "output", f"contact_frames_{batch_number}")
     os.makedirs(output_dir, exist_ok=True)
 
     for i in range(1, num_kicks + 1):
-        video_path = f"../dataset/Session 1/Kick {i}.mp4"
+        video_path = f"../dataset/Session {batch_number}/Kick {i}.mp4"
         print(f"Processing {video_path}...")
 
         # Step 1: Extract audio from video
@@ -107,8 +107,7 @@ def process_kick_videos(num_kicks, batch_number):
 
     # Save the contact frames as a NumPy array
     contact_frames_array = np.array(contact_frames)
+    output_file_path = os.path.join(output_dir, "contact_frames.npy")
+    np.save(output_file_path, contact_frames_array)
+    print(f"Contact frames saved to '{output_file_path}'.")
     return contact_frames_array
-    np.save(os.path.join(output_dir, "contact_frames.npy"), contact_frames_array)
-    print(f"Contact frames saved to '{output_dir}\\contact_frames.npy'.")
-
-

@@ -112,7 +112,15 @@ else:
 
 # ---------------------------------------------------------------
 # Using the Soccer Ball Location module, find the location of the soccer ball
-ball_location = [FindBallLocation(i) for i in range(num_kicks)]
+ball_location = np.load(f"/Users/nolanjetter/Documents/GitHub/Soccer ML Project Main/output/Batch {batch_number}/ball_locations.npy", allow_pickle=True)
+print(ball_location.shape)
+for i in range(num_kicks, num_kicks+1):
+    return_val = FindBallLocation(i, batch_number)
+    print(f"return value: {return_val}")
+    ball_location = np.append(ball_location, np.array(return_val).reshape(1, -1), axis=0)
+print(ball_location.shape)
+np.save(f"/Users/nolanjetter/Documents/GitHub/Soccer ML Project Main/output/Batch {batch_number}/ball_locations.npy",
+        ball_location, allow_pickle=True)
 # ---------------------------------------------------------------
 
 # ---------------------------------------------------------------
@@ -220,7 +228,6 @@ print("frame_num_array:", frame_num_array)
 
 np.save(os.path.join(output_dir, "contact_foot_trajs.npy"), 
         {'x_fit': x_fit_array, 'y_fit': y_fit_array, 'frame_nums': frame_num_array})
-
 
 # ---------------------------------------------------------------
 """""

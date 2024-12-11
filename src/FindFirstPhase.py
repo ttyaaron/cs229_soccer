@@ -28,10 +28,13 @@ import os
 FILENAME = 'contact_frames.npy'
 
 
-def load_contact_frames(filename=FILENAME):
+def load_contact_frames(batch_number, filename=FILENAME):
     """Load the array representing frames of ball contact."""
     try:
-        contact_frames = np.load(filename)
+        parent_path = os.path.dirname(os.path.dirname(__file__))
+        child_path = f'output/batch {batch_number}/contact_frames_{batch_number}/contact_frames.npy'
+        filename = os.path.join(parent_path, child_path)
+        contact_frames = np.load(filename, allow_pickle=True)
         print(f"Successfully loaded {filename}. Shape: {contact_frames.shape}")
         return contact_frames
     except FileNotFoundError:
@@ -143,16 +146,15 @@ def find_plant_frame(avg_foot_positions, tol=3):
     return -1  # If no stationary frame is found
 
 
-def find_foot_plant_information(kick_number):
-    # kick_number = 10
+def find_foot_plant_information(kick_number, batch_number):
     print("Kick Number:", kick_number)
-    contact_frame = load_contact_frames()[kick_number - 1]
+    contact_frame = load_contact_frames(batch_number)[kick_number - 1]
     pose_keypoints_array = []
 
     # Load pose keypoints up to the contact frame
     for i in range(contact_frame):
         json_file = os.path.join(os.path.dirname(__file__),
-                                 f'../output/pose_estimation_results_1/Kick_{kick_number}_0000000000{str(i).zfill(2)}_keypoints.json')
+                                 f'../output/pose_estimation_results_{batch_number}/Kick {kick_number}_0000000000{str(i).zfill(2)}_keypoints.json')
         pose_keypoints = load_keypoints_from_json(json_file)
         if pose_keypoints is not None:
             pose_keypoints_array.append(pose_keypoints)

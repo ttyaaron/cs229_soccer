@@ -25,37 +25,8 @@ def preprocess_image(image, gamma=1.2):
     return processed_image
 
 
-# Load in the video directory
-kick_number = 15
-session_number = 3
-video_directory = "/Users/nolanjetter/Documents/GitHub/cs229_soccer/dataset/Session " + str(session_number) +"/Kick " + str(kick_number) + ".mp4"
-ball_coordinates = "/Users/nolanjetter/Documents/GitHub/cs229_soccer/output/Session " + str(session_number) + "/Ball_coordinates.npy"
-ball_coordinate = ball_coordinates[kick_number]
-# Load the video
-video = cv2.VideoCapture(video_directory)
-
-# Grab the first frame from the video
-ret, frame = video.read()
-if not ret:
-    print("Failed to read video")
-    video.release()
-    exit()
-
-# Convert the frame to grayscale (required for edge detection)
-gray = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
-
-# Perform Canny edge detection
-edges = cv2.Canny(gray, 100, 200)  # Adjust the thresholds as needed
-
-# Perform the Hough Line Transform to get lines above a certain threshold
-lines = cv2.HoughLinesP(edges, rho=1, theta=np.pi / 180, threshold=100, minLineLength=50, maxLineGap=10)
-processed_image = preprocess_image(frame)
-
-
 # Function to check if a line is white
-
-
-def is_white_line(line, image, white_threshold=100):
+def is_white_line(line, image, white_threshold=225):
     x1, y1, x2, y2 = line[0]
     num_white_pixels = 0
     num_checked_pixels = 0
@@ -155,7 +126,6 @@ def capture_goal_posts(vertical_sets, horizontal_lines, alpha=1.0):
             if total_cost < best_cost:
                 best_cost = total_cost
                 best_match = [left_post, right_post, h_line]
-
     return best_match
 
 
@@ -232,41 +202,77 @@ def capture_vertical_pairs(vertical_lines, y_threshold=20, spread_threshold=30):
     return vertical_pairs
 
 
-# Check each line to see if it is white, and if so, whether it's vertical or horizontal
-white_lines = []
-white_vertical_lines = []
-white_horizontal_lines = []
+# Load in the video directory
+def main(session_number, kick_number):
+    video_directory = "/Users/nolanjetter/Documents/GitHub/cs229_soccer/dataset/Session " + str(session_number) +"/Kick " + str(kick_number) + ".mp4"
+    ball_coordinates = "/Users/nolanjetter/Documents/GitHub/cs229_soccer/output/Session " + str(session_number) + "/Ball_coordinates.npy"
+    ball_coordinate = ball_coordinates[kick_number]
+    # Load the video
+    video = cv2.VideoCapture(video_directory)
 
-# Filter lines based on their color (white in this case).
-# Further categorize white lines into vertical or horizontal groups.
-for line in lines:
-    if is_white_line(line, processed_image):
-        white_lines.append(line)
-        if is_vertical_line(line):
-            white_vertical_lines.append(line)
-        elif is_horizontal_line(line):
-            white_horizontal_lines.append(line)
+    # Grab the first frame from the video
+    ret, frame = video.read()
+    if not ret:
+        print("Failed to read video")
+        video.release()
+        exit()
 
-# create pairs of lines based on how close their y-coordinate midpoints are.
-vert_sets = capture_vertical_pairs(white_vertical_lines)
-left_post, right_post, crossbar = capture_goal_posts(vert_sets, white_horizontal_lines)
-left_post, right_post, crossbar = process_goal_structure(left_post, right_post, crossbar)
+    # Convert the frame to grayscale (required for edge detection)
+    gray = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
 
-# Draw left post in blue
-x1, y1, x2, y2 = left_post[0]
-cv2.line(frame, (x1, y1), (x2, y2), (255, 0, 0), 2)
+    # Perform Canny edge detection
+    edges = cv2.Canny(gray, 100, 200)  # Adjust the thresholds as needed
 
-# Draw right post in blue
-x1, y1, x2, y2 = right_post[0]
-cv2.line(frame, (x1, y1), (x2, y2), (255, 0, 0), 2)
+    # Perform the Hough Line Transform to get lines above a certain threshold
+    lines = cv2.HoughLinesP(edges, rho=1, theta=np.pi / 180, threshold=100, minLineLength=50, maxLineGap=10)
+    processed_image = preprocess_image(frame)
 
-# Draw crossbar in red
-x1, y1, x2, y2 = crossbar[0]
-cv2.line(frame, (x1, y1), (x2, y2), (0, 0, 255), 2)
+    # Check each line to see if it is white, and if so, whether it's vertical or horizontal
+    white_lines = []
+    white_vertical_lines = []
+    white_horizontal_lines = []
 
-# Display the result
-cv2.imshow("Edges", edges)
-cv2.imshow("Goal Structure Detected", frame)
-cv2.waitKey(0)
-cv2.destroyAllWindows()
-video.release()
+    # Filter lines based on their color (white in this case).
+    # Further categorize white lines into vertical or horizontal groups.
+    for line in lines:
+        if is_white_line(line, processed_image):
+            white_lines.append(line)
+            if is_vertical_line(line):
+                white_vertical_lines.append(line)
+            elif is_horizontal_line(line):
+                white_horizontal_lines.append(line)
+
+    vert_sets = capture_vertical_pairs(white_vertical_lines)
+    left_post, right_post, crossbar = capture_goal_posts(vert_sets, white_horizontal_lines)
+    left_post, right_post, crossbar = process_goal_structure(left_post, right_post, crossbar)
+    # for line in white_lines:
+    #     line = line[0]
+    #     cv2.line(frame, (line[0], line[1]), (line[2], line[3]), (255, 0, 0), 2)
+
+    # Draw left post in blue
+    x1, y1, x2, y2 = left_post[0]
+    cv2.line(frame, (x1, y1), (x2, y2), (255, 0, 0), 2)
+
+    # Draw right post in blue
+    x1, y1, x2, y2 = right_post[0]
+    cv2.line(frame, (x1, y1), (x2, y2), (255, 0, 0), 2)
+
+    # Draw crossbar in red
+    x1, y1, x2, y2 = crossbar[0]
+    cv2.line(frame, (x1, y1), (x2, y2), (0, 0, 255), 2)
+
+    # save the file
+    directory = f"/Users/nolanjetter/Documents/GitHub/Soccer ML Project Main/output/Batch {session_number}/GoalPosts/sample_{i}"
+    np.save(directory, (left_post, right_post, crossbar), allow_pickle=True)
+
+    # Display the result
+    cv2.imshow("Edges", edges)
+    cv2.imshow("Goal Structure Detected", frame)
+    cv2.waitKey(0)
+    cv2.destroyAllWindows()
+    video.release()
+
+
+for i in range(1, 2):
+    main(2, i)
+    print(f"processed sample {i}")
