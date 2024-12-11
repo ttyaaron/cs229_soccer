@@ -141,9 +141,9 @@ def FindBallLocation(video_number):
         return
     closest_ball = find_closest_ball(circles, left_foot, right_foot)
 
-    # Draw annotations and display
-    annotated_frame = draw_annotations(frame, left_foot, right_foot, closest_ball)
-    cv2.imshow('Detected Soccer Ball', annotated_frame)
-    cv2.waitKey(0)
-    cv2.destroyAllWindows()
-    cap.release()
+    # Draw annotations and display, temporarily commented for testing
+    # annotated_frame = draw_annotations(frame, left_foot, right_foot, closest_ball)
+    # cv2.imshow('Detected Soccer Ball', annotated_frame)
+    # cv2.waitKey(0)
+    # cv2.destroyAllWindows()
+    # cap.release()

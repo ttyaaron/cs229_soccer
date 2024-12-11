@@ -18,4 +18,4 @@ Each row represents a training example. The columns represent different labels. 
 6. spin (right, left, top, back, knuckle). 
 
 ## Preprocessing Result
-See file \output\Preprocessed_keypoints_1.npy. This is the numpy array containing the preprocessed data. It is of shape (20,2,25,2). (num_samples, frame, keypoints, x/y). Where frame[0] = contact frame, and frame[1] = plant foot frame. 
+See file \output\Preprocessed_keypoints_1.npy. This is the numpy array containing the preprocessed data. It is of shape (20,2,25,2). (num_samples, frame, keypoints, x/y). Where frame[0] = contact frame, and frame[1] = plant foot frame. Plant foot frame refers to the frame when the foot-not-hitting-the-ball’s location is fixed.

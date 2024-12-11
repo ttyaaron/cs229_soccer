@@ -2,12 +2,15 @@ import numpy as np
 import matplotlib.pyplot as plt
 
 # Load and preprocess the data
-data = np.load("Processed_keypoints.npy")
-data = data[:, :1, :, :]  # Only take the contact frame
-data = np.reshape(data, (20, 50)).astype(np.float64)  # Ensure data is float64
+# data = np.load("Processed_keypoints.npy")
+# data = data[:, :1, :, :]  # Only take the contact frame
+# data = np.reshape(data, (20, 50)).astype(np.float64)  # Ensure data is float64
+
+data = np.load("../output/contact_foot_traj_1/training_input_with_traj.npy")
+
 labels_list = []
 labels_names = ["direction", "height", "quality"]
-labels = np.load("Data_labels.npy", allow_pickle=True)
+labels = np.load("../dataset/Data_labels.npy", allow_pickle=True)
 labels_list.append(np.reshape(labels[:, 2:3], (20,)))
 labels_list.append(np.reshape(labels[:, 3:4], (20,)))
 quality_labels = np.reshape(labels[:, 5:6], (20,)) - 1
@@ -66,7 +69,7 @@ def logistic_regression_loocv_multiclass(data, labels, alpha, num_iters):
 
 # Parameters for gradient descent and iteration range
 alpha = 0.01  # Learning rate
-iteration_values = list(range(100, 10000, 1000))  # Range from 100 to 2000 by 100
+iteration_values = list(range(100, 10000, 1000))  # Range from 100 to 10000 by 1000
 
 # Lists to store accuracy results for each label type
 test_list = []

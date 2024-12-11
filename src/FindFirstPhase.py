@@ -41,6 +41,7 @@ def load_contact_frames(filename=FILENAME):
 
 def load_keypoints_from_json(json_file):
     """Load pose keypoints from a JSON file."""
+    "Output array is in the shape (25, 3)"
     with open(json_file, 'r') as f:
         data = json.load(f)
         if len(data["people"]) == 0:
@@ -143,7 +144,7 @@ def find_plant_frame(avg_foot_positions, tol=3):
 
 
 def find_foot_plant_information(kick_number):
-    kick_number = 10
+    # kick_number = 10
     print("Kick Number:", kick_number)
     contact_frame = load_contact_frames()[kick_number - 1]
     pose_keypoints_array = []
@@ -156,8 +157,10 @@ def find_foot_plant_information(kick_number):
         if pose_keypoints is not None:
             pose_keypoints_array.append(pose_keypoints)
 
+    # print("pose_keypoints_array: ", pose_keypoints_array[0])
+
     pose_keypoints_array = np.array(pose_keypoints_array)
-    print("Pose Keypoints Shape:", pose_keypoints_array.shape)
+    # print("Pose Keypoints Shape:", pose_keypoints_array.shape)
 
     ball_location = [0, 0]
     plant_foot, foot_positions_per_frame = find_plant_foot(ball_location, pose_keypoints_array)
@@ -165,5 +168,7 @@ def find_foot_plant_information(kick_number):
     # need to add in functionality to find the frame at which the foot is planted.
     frame = find_plant_frame(np.array(foot_positions_per_frame))
 
-    print("Plant Foot:", plant_foot)
-    print("planted on frame ", frame)
+    print("Plant Foot:", plant_foot) # plant_foot is a string
+    print("planted on frame ", frame) # frame is an int
+
+    return (plant_foot, frame)

@@ -2,15 +2,13 @@ import numpy as np
 import matplotlib.pyplot as plt
 
 # Load and preprocess the data
-data = np.load("../output/Processed_keypoints_1.npy")
+data = np.load("Processed_keypoints.npy")
 data = data[:, :1, :, :]  # Only take the contact frame
 data = np.reshape(data, (20, 50)).astype(np.float64)  # Ensure data is float64
 # Size of the first dimension is the number of samples, and 
 # size of the second dimension is the number of Pose25, both x and y coordinates
 
-data = np.load("../output/contact_foot_traj_1/training_input_with_traj.npy")
-
-labels = np.load("../dataset/Data_labels.npy", allow_pickle=True)
+labels = np.load("Data_labels.npy", allow_pickle=True)
 labels = labels[:, 4:5]  # Focus on the type of strike (5th column)
 labels = np.reshape(labels, (20,)).astype(np.float64)  # Ensure labels are float64
 

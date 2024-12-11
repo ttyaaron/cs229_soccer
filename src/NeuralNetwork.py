@@ -7,12 +7,13 @@ from tensorflow.keras.utils import to_categorical
 import matplotlib.pyplot as plt
 
 # Load and preprocess the data
-data = np.load("Processed_keypoints.npy")
-data = data[:, :1, :, :]  # Only take the contact frame
-data = np.reshape(data, (20, 50)).astype(np.float32)  # Reshape to (20, 50) and ensure float32 type
+# data = np.load("Processed_keypoints.npy")
+# data = data[:, :1, :, :]  # Only take the contact frame
+# data = np.reshape(data, (20, 50)).astype(np.float32)  # Reshape to (20, 50) and ensure float32 type
+data = np.load("../output/contact_foot_traj_1/training_input_with_traj.npy")
 
 # Load and one-hot encode the labels for multi-class classification
-labels = np.load("Data_labels.npy", allow_pickle=True)
+labels = np.load("../dataset/Data_labels.npy", allow_pickle=True)
 labels_list = []
 labels_names = ["direction", "height", "quality"]
 
