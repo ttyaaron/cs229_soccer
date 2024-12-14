@@ -154,33 +154,34 @@ def find_circles(gray_image, dp=1, min_dist=20, param1=20, param2=15, min_radius
 
 if __name__ == "__main__":
     # Example usage
-    # batch_number = 3  # Replace with user input or configuration
-    # video_number = 25
-    # keep_iterating = True
-    # while keep_iterating:
-    #     try:
-    #         # Extract the matrix to be decomposed
-    #         parent_dir = os.path.dirname(__file__)
-    #         child_dir = f"../dataset/Session {batch_number}/Kick {video_number}.mp4"
-    #         file_path = os.path.join(parent_dir, child_dir)
-    #         M, frame_shape = load_video_frames(file_path)
-    #
-    #         # Apply RPCA
-    #         L, S = rpca(M)
-    #         print(f"Done with RPCA. kick number {video_number}")
-    #
-    #         # Save sparse representation
-    #         save_directory = f"/Users/nolanjetter/Documents/GitHub/Soccer ML Project Main/output/Batch {batch_number}/RPCA_Results"
-    #         os.makedirs(save_directory, exist_ok=True)  # Ensure the directory exists
-    #         save_path = os.path.join(save_directory, f"sparse_sample_{video_number}")
-    #         np.save(save_path, S, allow_pickle=True)
-    #         video_number += 1
-    #     except:
-    #         keep_iterating = False
-    #         video_number = 1
+    batch_number = 3  # Replace with user input or configuration
+    video_number = 36
+    keep_iterating = True
+    while keep_iterating:
+        try:
+            # Extract the matrix to be decomposed
+            parent_dir = os.path.dirname(__file__)
+            child_dir = f"../dataset/Session {batch_number}/Kick {video_number}.mp4"
+            file_path = os.path.join(parent_dir, child_dir)
+            M, frame_shape = load_video_frames(file_path)
+
+            # Apply RPCA
+            L, S = rpca(M)
+            print(f"Done with RPCA. kick number {video_number}")
+
+            # Save sparse representation
+            save_directory = f"/Users/nolanjetter/Documents/GitHub/Soccer ML Project Main/output/Batch {batch_number}/RPCA_Results"
+            os.makedirs(save_directory, exist_ok=True)  # Ensure the directory exists
+            save_path = os.path.join(save_directory, f"sparse_sample_{video_number}")
+            np.save(save_path, S, allow_pickle=True)
+            video_number += 1
+        except:
+            keep_iterating = False
+            video_number = 1
 
     # visualize the sparse matrix
-
-    M, frame_shape = load_video_frames("/Users/nolanjetter/Documents/GitHub/Soccer ML Project Main/dataset/Session 2/Kick 1.mp4")
-    S_matrix = np.load("/Users/nolanjetter/Documents/GitHub/Soccer ML Project Main/output/Batch 2/RPCA_Results/sparse_sample_1.npy", allow_pickle=True)
-    visualize_rpca_results(S_matrix, frame_shape)
+    #
+    # M, frame_shape = load_video_frames("/Users/nolanjetter/Documents/GitHub/Soccer ML Project Main/dataset/Session 1/Kick 1.mp4")
+    # print(frame_shape)
+    # S_matrix = np.load("/Users/nolanjetter/Documents/GitHub/Soccer ML Project Main/output/Batch 1/RPCA_Results/sparse_sample_1.npy", allow_pickle=True)
+    # visualize_rpca_results(S_matrix, frame_shape)

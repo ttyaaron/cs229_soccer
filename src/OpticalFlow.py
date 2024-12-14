@@ -135,6 +135,52 @@ def calculate_angle(x1, y1, x2, y2):
     return np.degrees(np.arctan2(y2 - y1, x2 - x1))
 
 
+import matplotlib.pyplot as plt
+import random
+
+def plot_all_trajectories(filtered_trajectories, frame_height, frame_width, best_trajectory=None):
+    """
+    Plot all trajectories in different colors, highlighting the best trajectory.
+
+    Parameters:
+    - filtered_trajectories: List of trajectories. Each trajectory is a list of (x, y, area, frame_idx).
+    - frame_height: int, the height of the video frames (used to set plot bounds).
+    - frame_width: int, the width of the video frames (used to set plot bounds).
+    - best_trajectory: List of (x, y, area, frame_idx), the best trajectory to highlight (optional).
+
+    Returns:
+    None
+    """
+    # Generate random colors for each trajectory
+    trajectory_colors = [
+        (random.random(), random.random(), random.random())
+        for _ in range(len(filtered_trajectories))
+    ]
+
+    # Create the plot
+    plt.figure(figsize=(12, 8))
+    plt.title("Trajectories")
+    plt.xlabel("X Position")
+    plt.ylabel("Y Position")
+    plt.xlim(0, frame_width)
+    plt.ylim(frame_height, 0)  # Invert Y-axis for image-style coordinates
+
+    # Plot each trajectory
+    for traj_idx, traj in enumerate(filtered_trajectories):
+        color = trajectory_colors[traj_idx]
+        x_coords = [point[0] for point in traj]  # Extract x-coordinates
+        y_coords = [point[1] for point in traj]  # Extract y-coordinates
+        plt.plot(x_coords, y_coords, marker="o", linestyle="-", color=color, linewidth=1.5, markersize=4)
+
+    # Highlight the best trajectory if provided
+    if best_trajectory:
+        x_coords = [point[0] for point in best_trajectory]
+        y_coords = [point[1] for point in best_trajectory]
+        plt.plot(x_coords, y_coords, marker="o", linestyle="-", color="red", linewidth=2.5, markersize=6, label="Best Trajectory")
+
+    plt.show()
+
+
 def find_trajectories(all_contours, starting_ball_location, angle_tolerance=25):
     """
     Find trajectories by associating contours across frames.
@@ -338,7 +384,7 @@ def display_frames_and_trajectories(video_path, all_contours, frame_height, fram
         trajectories.extend(new_trajectories)
 
     best_trajectory, loss, filtered_trajectories = find_best_trajectory(trajectories)
-
+    plot_all_trajectories(filtered_trajectories, frame_height, frame_width, best_trajectory=best_trajectory)
     return best_trajectory, filtered_trajectories
 
 
@@ -389,13 +435,13 @@ def fill_trajectory_gaps(best_trajectory, ball_location):
     return filled_trajectory
 
 
-def visualize_trajectory(video_path, best_trajectory, contact_frame):
+def visualize_trajectories(video_path, filtered_trajectories, contact_frame):
     """
-    Visualize the best trajectory by drawing rectangles on the video frames.
+    Visualize multiple trajectories simultaneously by displaying the traced paths so far.
 
     Parameters:
     - video_path: str, path to the video file.
-    - best_trajectory: List of (x, y, area, frame_idx), the best trajectory points.
+    - filtered_trajectories: List of trajectories. Each trajectory is a list of (x, y, area, frame_idx).
     - contact_frame: int, the frame number where the trajectory visualization should start.
 
     Returns:
@@ -406,30 +452,39 @@ def visualize_trajectory(video_path, best_trajectory, contact_frame):
         print(f"Error: Unable to open video file at {video_path}.")
         return
 
-    for frame_idx, (x, y, area, _) in enumerate(best_trajectory):
-        # Set the video frame position dynamically
-        print(f"contact frame {contact_frame}")
-        print(f"frame_idx {frame_idx}")
+    # Generate a unique color for each trajectory
+    trajectory_colors = [
+        (random.randint(0, 255), random.randint(0, 255), random.randint(0, 255))
+        for _ in range(len(filtered_trajectories))
+    ]
+
+    frame_idx = 0
+    while True:
         current_frame = contact_frame + frame_idx
         cap.set(cv2.CAP_PROP_POS_FRAMES, current_frame)
-
         ret, frame = cap.read()
         if not ret:
             print(f"End of video or invalid frame at {current_frame}.")
             break
 
-        # Draw the rectangle for the current trajectory point
-        side_length = int(np.sqrt(area))  # Approximate square size from area
-        top_left = (int(x - side_length / 2), int(y - side_length / 2))
-        bottom_right = (int(x + side_length / 2), int(y + side_length / 2))
-        cv2.rectangle(frame, top_left, bottom_right, (0, 255, 0), 2)
+        # Draw the traced trajectories up to this frame
+        for traj_idx, traj in enumerate(filtered_trajectories):
+            color = trajectory_colors[traj_idx]
+            points = traj[:frame_idx + 1]  # Get all points up to the current frame
+            if len(points) > 1:
+                for i in range(len(points) - 1):
+                    # Draw lines between consecutive points
+                    x1, y1, _, _ = points[i]
+                    x2, y2, _, _ = points[i + 1]
+                    cv2.line(frame, (int(x1), int(y1)), (int(x2), int(y2)), color, thickness=4)
 
-        # Display the frame
+        # Show the frame
         cv2.imshow("Trajectory Visualization", frame)
 
         # Wait for key press
         key = cv2.waitKey(0) & 0xFF
         if key == ord('n'):  # Press 'n' to move to the next frame
+            frame_idx += 1
             continue
         elif key == 27:  # Press ESC to quit
             break
@@ -510,6 +565,56 @@ def visualize_multiple_trajectories(video_path, filtered_trajectories, best_traj
     cv2.destroyAllWindows()
 
 
+def visualize_best_trajectory(video_path, best_trajectory, contact_frame):
+    """
+    Visualize the best trajectory by displaying its traced path in blue.
+
+    Parameters:
+    - video_path: str, path to the video file.
+    - best_trajectory: List of (x, y, area, frame_idx), the best trajectory points.
+    - contact_frame: int, the frame number where the trajectory visualization should start.
+
+    Returns:
+    None
+    """
+    cap = cv2.VideoCapture(video_path)
+    if not cap.isOpened():
+        print(f"Error: Unable to open video file at {video_path}.")
+        return
+
+    frame_idx = 0
+    while True:
+        current_frame = contact_frame + frame_idx
+        cap.set(cv2.CAP_PROP_POS_FRAMES, current_frame)
+        ret, frame = cap.read()
+        if not ret:
+            print(f"End of video or invalid frame at {current_frame}.")
+            break
+
+        # Draw the traced best trajectory up to this frame
+        points = best_trajectory[:frame_idx + 1]  # Get all points up to the current frame
+        if len(points) > 1:
+            for i in range(len(points) - 1):
+                # Draw lines between consecutive points
+                x1, y1, _, _ = points[i]
+                x2, y2, _, _ = points[i + 1]
+                cv2.line(frame, (int(x1), int(y1)), (int(x2), int(y2)), (255, 0, 0), thickness=2)  # Blue color
+
+        # Show the frame
+        cv2.imshow("Best Trajectory Visualization", frame)
+
+        # Wait for key press
+        key = cv2.waitKey(0) & 0xFF
+        if key == ord('n'):  # Press 'n' to move to the next frame
+            frame_idx += 1
+            continue
+        elif key == 27:  # Press ESC to quit
+            break
+
+    cap.release()
+    cv2.destroyAllWindows()
+
+
 def main(batch_number, sample_number):
     ball_location = np.load(f"/Users/nolanjetter/Documents/GitHub/Soccer ML Project Main/output/Batch {batch_number}/ball_locations.npy")[sample_number]
     video_path = f"/Users/nolanjetter/Documents/GitHub/Soccer ML Project Main/dataset/Session {batch_number}/Kick {sample_number}.mp4"
@@ -517,7 +622,7 @@ def main(batch_number, sample_number):
     frame_height = 540  # Adjust based on your data
     frame_width = 960  # Adjust based on your data
     contours = process_sparse_matrix(sparse_matrix, frame_height, frame_width)
-
+    print("contours found...")
     saved_ball_locations = []
     loss_array = [1]
 
@@ -555,27 +660,23 @@ def main(batch_number, sample_number):
             #     # Draw the best rectangle
             #     x, y, w, h = best_pair["rectangle"]
             #     cv2.rectangle(frame, (x, y), (x + w, y + h), (0, 255, 255), 5)  # Green for the best rectangle
-            #
+
             # Show the frame with bounding boxes
-            # cv2.imshow("Ball Tracking", frame)
-            #
-            # # Wait for user interaction
-            # key = cv2.waitKey(0) & 0xFF
-            # if key == 27:  # ESC key
-            #     frame_counter += 1  # Move to the next frame
-            # elif key == ord('q'):  # 'q' key to quit
-            #     break
+        #     cv2.imshow("Ball Tracking", frame)
+        #
+        #     # Wait for user interaction
+        #     key = cv2.waitKey(0) & 0xFF
+        #     if key == 27:  # ESC key
+        #         frame_counter += 1  # Move to the next frame
+        #     elif key == ord('q'):  # 'q' key to quit
+        #         break
             frame_counter += 1
         except Exception as e:
             print(f"Error processing frame {frame_counter}: {e}")
             break
-
-
     cap.release()
     cv2.destroyAllWindows()
 
-    # write the function find_trajectories.
-    # trajectories = find_trajectories(all_contours, ball_location)
     print("finding best trajectory")
     best_trajectory, filtered_trajectories = display_frames_and_trajectories(video_path, all_contours, frame_height, frame_width, ball_location)
     fig, ax = plt.subplots(figsize=(10, 6))
@@ -588,16 +689,19 @@ def main(batch_number, sample_number):
     best_filled_trajectory = fill_trajectory_gaps(best_trajectory, ball_location)
 
     # save the best filled trajectory
-    save_directory = f"/Users/nolanjetter/Documents/GitHub/Soccer ML Project Main/output/Batch 1/Ball Trajectories/sample_{sample_number}.npy"
-    np.save(save_directory, np.array(best_filled_trajectory), allow_pickle=True)
+    # save_directory = f"/Users/nolanjetter/Documents/GitHub/Soccer ML Project Main/output/Batch 1/Ball Trajectories/sample_{sample_number}.npy"
+    # np.save(save_directory, np.array(best_filled_trajectory), allow_pickle=True)
 
     filtered_filled_trajectories = []
     for traj in filtered_trajectories:
         filtered_filled_trajectories.append(fill_trajectory_gaps(traj, ball_location))
-    # visualize_multiple_trajectories(video_path, filtered_filled_trajectories, best_filled_trajectory, first_val)
+
+    visualize_trajectories(video_path, filtered_filled_trajectories, first_val)
+    visualize_best_trajectory(video_path, best_filled_trajectory, first_val)
+    visualize_multiple_trajectories(video_path, filtered_filled_trajectories, best_filled_trajectory, first_val)
 
 
-for i in range(1, 21):
+for i in range(1, 2):
     try:
         main(1, i)
     except:

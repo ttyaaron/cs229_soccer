@@ -245,9 +245,6 @@ def main(session_number, kick_number):
     vert_sets = capture_vertical_pairs(white_vertical_lines)
     left_post, right_post, crossbar = capture_goal_posts(vert_sets, white_horizontal_lines)
     left_post, right_post, crossbar = process_goal_structure(left_post, right_post, crossbar)
-    # for line in white_lines:
-    #     line = line[0]
-    #     cv2.line(frame, (line[0], line[1]), (line[2], line[3]), (255, 0, 0), 2)
 
     # Draw left post in blue
     x1, y1, x2, y2 = left_post[0]
@@ -274,5 +271,5 @@ def main(session_number, kick_number):
 
 
 for i in range(1, 2):
-    main(2, i)
+    main(1, i)
     print(f"processed sample {i}")

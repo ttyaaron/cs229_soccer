@@ -206,7 +206,8 @@ def adjust_bounding_boxes(bounding_boxes):
     return adjusted_boxes
 
 
-def detect_motion_with_bounding_boxes(file_path, frame_height, frame_width, output_dir, motion_threshold=2.0, weight=0.5, visualize=False):
+
+def detect_motion_with_bounding_boxes(file_path, frame_height, frame_width, output_dir, motion_threshold=2.0, weight=0.5, visualize=False, save=False):
     """
     Detect motion using optical flow, combine bounding boxes, select the largest box,
     and adjust bounding boxes using temporal smoothing. Visualizes the results.
@@ -216,6 +217,7 @@ def detect_motion_with_bounding_boxes(file_path, frame_height, frame_width, outp
 
     # Load sparse matrix
     sparse_matrix = np.load(file_path)
+    print(sparse_matrix.shape)
     total_pixels, num_frames = sparse_matrix.shape
 
     if total_pixels != frame_height * frame_width:
@@ -252,10 +254,11 @@ def detect_motion_with_bounding_boxes(file_path, frame_height, frame_width, outp
     smoothed_bounding_boxes = smooth_x_positions(adjusted_bounding_boxes, weight=weight)
 
     # Visualize smoothed bounding boxes
+    all_boxes = []
     for i, box in enumerate(smoothed_bounding_boxes):
         if box is None:
             continue  # Skip frames with no bounding boxes
-
+        all_boxes.append(box)
         x, y, w, h = box
         sparse_frame = sparse_matrix[:, i].reshape((frame_width, frame_height))
         frame = cv2.normalize(sparse_frame, None, 0, 255, cv2.NORM_MINMAX).astype(np.uint8)
@@ -268,7 +271,7 @@ def detect_motion_with_bounding_boxes(file_path, frame_height, frame_width, outp
             key = cv2.waitKey(0) & 0xFF
             if key == 27:  # ESC key
                 break
-        else:
+        if save:
             cropped_image = frame[int(y):int(y + h), int(x):int(x + w)]
             # Save the cropped image
             img_name = f"sample_{sample_number}_frame_{i}.png"
@@ -276,22 +279,65 @@ def detect_motion_with_bounding_boxes(file_path, frame_height, frame_width, outp
             cv2.imwrite(img_path, cropped_image)
 
     cv2.destroyAllWindows()
+    return all_boxes
+
+
+def find_plant_foot(all_boxes):
+    """
+    Determine the plant foot based on the motion direction of bounding boxes.
+
+    Args:
+        all_boxes (list of tuples): List of bounding boxes as (x, y, w, h).
+
+    Returns:
+        str: "Left" if the right foot is the plant foot, "Right" if the left foot is the plant foot.
+    """
+    if len(all_boxes) < 5:
+        return None  # Not enough data to determine the plant foot
+
+    directions = []
+    for i in range(1, min(5, len(all_boxes))):
+        if all_boxes[i - 1] is not None and all_boxes[i] is not None:
+            directions.append(all_boxes[i][0] - all_boxes[i - 1][0])  # Compare x-coordinates
+
+    if len(directions) == 0:
+        return None  # No motion detected
+
+    # Determine if the motion is predominantly to the left or right
+    avg_direction = sum(directions) / len(directions)
+    return "Right" if avg_direction < 0 else "Left"
 
 
 if __name__ == "__main__":
-    # Define paths
-    session_number = 3
-    batch_path = f"/Users/nolanjetter/Documents/GitHub/Soccer ML Project Main/output/Batch {session_number}/RPCA_Results"
-
-    sample_number = 1
-    while True:
-        print(f"processing sample number {sample_number}...")
-        # Construct the file path for the current sample
-        file_path = os.path.join(batch_path, f"sparse_sample_{sample_number}.npy")
-        if not os.path.exists(file_path):
-            print(f"File not found: {file_path}, stopping visualization.")
-            break
-
+    for session_number in range(2, 4):
+        batch_path = f"/Users/nolanjetter/Documents/GitHub/Soccer ML Project Main/output/Batch {session_number}/RPCA_Results"
         output_base_dir = f"/Users/nolanjetter/Documents/GitHub/Soccer ML Project Main/output/Batch {session_number}/Player Images"
-        detect_motion_with_bounding_boxes(file_path, frame_height=540, frame_width=960, output_dir=output_base_dir, motion_threshold=2.0, weight=0.5)
-        sample_number += 1
+        plant_foot_array = []
+
+        sample_number = 1
+        while True:
+            print(f"Processing sample number {sample_number}...")
+            # Construct the file path for the current sample
+            file_path = os.path.join(batch_path, f"sparse_sample_{sample_number}.npy")
+            if not os.path.exists(file_path):
+                print(f"File not found: {file_path}, stopping visualization.")
+                break
+
+            # Process the sample
+            all_boxes = detect_motion_with_bounding_boxes(file_path, frame_height=540, frame_width=960, output_dir=output_base_dir, motion_threshold=2.0, weight=0.5, visualize=True)
+
+            # Determine the plant foot
+            # plant_foot = find_plant_foot(all_boxes)
+            # if plant_foot:
+            #     print(f"Sample {sample_number}: Plant foot determined as {plant_foot}.")
+            #     plant_foot_array.append((sample_number, plant_foot))
+            # else:
+            #     print(f"Sample {sample_number}: Unable to determine plant foot.")
+            #     plant_foot_array.append((sample_number, "Unknown"))
+
+            sample_number += 1
+
+        # Save the plant foot array
+        # output_file = os.path.join(os.path.dirname(batch_path), "plant_foot_array.npy")
+        # np.save(output_file, plant_foot_array)
+        # print(f"Plant foot data saved to {output_file}.")
