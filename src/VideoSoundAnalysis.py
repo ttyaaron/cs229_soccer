@@ -26,6 +26,7 @@ def save_frame_as_image(video, frame_number, output_path):
     # Save the frame as a PNG file
     cv2.imwrite(output_path, frame_bgr)
 
+
 # Step 1: Extract Audio from Video using MoviePy
 def extract_audio_from_video(video_path):
     video = VideoFileClip(video_path)
@@ -71,16 +72,16 @@ def visualize_contact_frame(video_path, contact_frame):
     plt.title(f'Contact Frame {contact_frame}')
     plt.show()
 
+
 # Main function to process multiple kick videos and save contact frames
-def process_kick_videos(num_kicks, batch_number):
+def process_kick_videos(num_kicks, base_video_path, output_base):
     contact_frames = []  # Array to store ball contact frames
 
     # Define the output directory for this batch
-    output_dir = os.path.join("..", "output", f"contact_frames_{batch_number}")
-    os.makedirs(output_dir, exist_ok=True)
+    output_dir = os.path.join(output_base, "contact frames.npy")
 
     for i in range(1, num_kicks + 1):
-        video_path = f"../dataset/Session {batch_number}/Kick {i}.mp4"
+        video_path = os.path.join(base_video_path, f"kick {i}.mp4")
         print(f"Processing {video_path}...")
 
         # Step 1: Extract audio from video
@@ -94,20 +95,23 @@ def process_kick_videos(num_kicks, batch_number):
 
         # Step 4: Convert ball contact time to video frame
         ball_contact_frame = time_to_frame(ball_contact_time, video.fps)
-        print(f"Ball contact detected in {video_path} at frame {ball_contact_frame}.")
 
         # Save the frame number in the array
         contact_frames.append(ball_contact_frame)
 
         # Save the contact frame as a PNG file in the batch-specific directory
-        output_image_path = os.path.join(output_dir, f"contact_frame_{i}.png")
-        # Assume 5 frames ago the ball hasn't been kicked.
-        save_frame_as_image(video, ball_contact_frame - 5, output_image_path)
+        output_image_path = os.path.join(os.path.dirname(output_dir), f"kick {i} contact.png")
+
+        save_frame_as_image(video, ball_contact_frame, output_image_path)
         print(f"Contact frame saved as {output_image_path}.")
 
     # Save the contact frames as a NumPy array
     contact_frames_array = np.array(contact_frames)
-    output_file_path = os.path.join(output_dir, "contact_frames.npy")
-    np.save(output_file_path, contact_frames_array)
-    print(f"Contact frames saved to '{output_file_path}'.")
+    np.save(output_dir, contact_frames_array)
+    print(f"Contact frames saved to '{output_dir}'. size: {len(contact_frames)}")
     return contact_frames_array
+
+
+back_view_base_video_path = "/Users/nolanjetter/Documents/GitHub/Soccer ML Project Main/dataset/Multi-View/Session 1/side view"
+output_base = "/Users/nolanjetter/Documents/GitHub/Soccer ML Project Main/output/Multi-View/Session 1/side view"
+process_kick_videos(31, back_view_base_video_path, output_base)

@@ -689,7 +689,7 @@ def main(batch_number, sample_number):
     best_filled_trajectory = fill_trajectory_gaps(best_trajectory, ball_location)
 
     # save the best filled trajectory
-    # save_directory = f"/Users/nolanjetter/Documents/GitHub/Soccer ML Project Main/output/Batch 1/Ball Trajectories/sample_{sample_number}.npy"
+    # save_directory = f"/Users/nolanjetter/Documents/GitHub/Soccer ML Project Main/output/Session 1/Ball Trajectories/sample_{sample_number}.npy"
     # np.save(save_directory, np.array(best_filled_trajectory), allow_pickle=True)
 
     filtered_filled_trajectories = []

@@ -3,7 +3,7 @@ import numpy as np
 import os
 
 
-def process_videos(session_number, output_directory, base_path, batch_name="Batch 1"):
+def process_videos(session_number, output_directory, base_path, batch_name="Session 1"):
     """
     Process videos in a given session, allowing the user to mark locations with clicks
     and navigate through frames. Clicking once on a video ends the processing for that kick.

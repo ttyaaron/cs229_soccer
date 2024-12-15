@@ -183,5 +183,5 @@ if __name__ == "__main__":
     #
     # M, frame_shape = load_video_frames("/Users/nolanjetter/Documents/GitHub/Soccer ML Project Main/dataset/Session 1/Kick 1.mp4")
     # print(frame_shape)
-    # S_matrix = np.load("/Users/nolanjetter/Documents/GitHub/Soccer ML Project Main/output/Batch 1/RPCA_Results/sparse_sample_1.npy", allow_pickle=True)
+    # S_matrix = np.load("/Users/nolanjetter/Documents/GitHub/Soccer ML Project Main/output/Session 1/RPCA_Results/sparse_sample_1.npy", allow_pickle=True)
     # visualize_rpca_results(S_matrix, frame_shape)
