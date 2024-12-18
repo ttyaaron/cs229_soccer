@@ -112,6 +112,6 @@ def process_kick_videos(num_kicks, base_video_path, output_base):
     return contact_frames_array
 
 
-back_view_base_video_path = "/Users/nolanjetter/Documents/GitHub/Soccer ML Project Main/dataset/Multi-View/Session 1/side view"
-output_base = "/Users/nolanjetter/Documents/GitHub/Soccer ML Project Main/output/Multi-View/Session 1/side view"
+back_view_base_video_path = "/Users/nolanjetter/Documents/GitHub/Soccer ML Project Main/dataset/Multi-View/Session 1/back view"
+output_base = "/Users/nolanjetter/Documents/GitHub/Soccer ML Project Main/output/Multi-View/Session 1/back view"
 process_kick_videos(31, back_view_base_video_path, output_base)
